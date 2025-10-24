@@ -8,17 +8,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from '../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Button } from '../components/ui/button';
-import { CreditCard, Banknote, Search, Filter, RefreshCw } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { CreditCard, Banknote, Search, Filter, RefreshCw, Upload, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AdminOrders() {
   const navigate = useNavigate();
-  const { user, orders, updateOrderStatus, refreshOrders } = useApp();
+  const { user, orders, updateOrderStatus, uploadScannerImage, refreshOrders } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('All');
   const [filterPayment, setFilterPayment] = useState('All');
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [uploadingOrderId, setUploadingOrderId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -99,6 +102,37 @@ export function AdminOrders() {
       toast.error('Failed to refresh orders. Please try again.');
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleScannerUpload = async (orderId: string, file: File) => {
+    setUploadingOrderId(orderId);
+    try {
+      await uploadScannerImage(orderId, file);
+      toast.success('Scanner image uploaded successfully!');
+      await refreshOrders(); // Refresh to get updated data
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.message || 'Failed to upload scanner image. Please try again.');
+    } finally {
+      setUploadingOrderId(null);
+    }
+  };
+
+  const handleFileSelect = (orderId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/jpeg')) {
+        toast.error('Only JPG images are allowed');
+        return;
+      }
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+      handleScannerUpload(orderId, file);
     }
   };
 
@@ -247,6 +281,58 @@ export function AdminOrders() {
                                 <>
                                   <CreditCard className="w-4 h-4 text-secondary" />
                                   <span className="text-sm">Online</span>
+                                  {order.scannerImage ? (
+                                    <Dialog>
+                                      <DialogTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="ml-2 p-1 h-6 w-6"
+                                          onClick={() => setSelectedImage(order.scannerImage!)}
+                                        >
+                                          <Eye className="w-3 h-3" />
+                                        </Button>
+                                      </DialogTrigger>
+                                      <DialogContent className="max-w-md">
+                                        <DialogHeader>
+                                          <DialogTitle>Payment Proof</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="flex justify-center">
+                                          <img
+                                            src={`http://localhost:5000${order.scannerImage}`}
+                                            alt="Payment proof"
+                                            className="max-w-full max-h-96 object-contain"
+                                          />
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                  ) : (
+                                    <div className="ml-2">
+                                      <input
+                                        type="file"
+                                        accept="image/jpeg"
+                                        onChange={(e) => handleFileSelect(order.id, e)}
+                                        className="hidden"
+                                        id={`scanner-${order.id}`}
+                                        disabled={uploadingOrderId === order.id}
+                                      />
+                                      <label htmlFor={`scanner-${order.id}`}>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="p-1 h-6 w-6"
+                                          asChild
+                                        >
+                                          <span>
+                                            <Upload className="w-3 h-3" />
+                                          </span>
+                                        </Button>
+                                      </label>
+                                      {uploadingOrderId === order.id && (
+                                        <span className="text-xs text-gray-500 ml-1">Uploading...</span>
+                                      )}
+                                    </div>
+                                  )}
                                 </>
                               ) : (
                                 <>

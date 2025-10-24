@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 
@@ -10,6 +11,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Serve static files from frontend
 app.use(express.static('../frontend'));
@@ -31,11 +35,13 @@ const authRoutes = require('./routes/auth');
 const foodRoutes = require('./routes/food');
 const orderRoutes = require('./routes/order');
 const cartRoutes = require('./routes/cart');
+const scannerRoutes = require('./routes/scanner');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/food', foodRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/scanner', scannerRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, CreditCard, Banknote, Sparkles, MapPin } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
@@ -13,10 +14,15 @@ import confetti from 'canvas-confetti';
 
 export function CartCheckout() {
   const navigate = useNavigate();
-  const { cart, updateCartItemQuantity, removeFromCart, placeOrder, user } = useApp();
+  const { cart, updateCartItemQuantity, removeFromCart, placeOrder, user, activeScanner, getActiveScanner } = useApp();
   const [paymentType, setPaymentType] = useState<'online' | 'cod'>('online');
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Load active scanner when component mounts
+  useEffect(() => {
+    getActiveScanner();
+  }, [getActiveScanner]);
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -212,6 +218,37 @@ export function CartCheckout() {
                       <Label htmlFor="online" className="flex-1 cursor-pointer flex items-center gap-2">
                         <CreditCard className="w-4 h-4 text-secondary" />
                         UPI (Online)
+                        {paymentType === 'online' && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="ml-2 text-xs"
+                              >
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Scan to Pay
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle>Scan QR Code to Pay</DialogTitle>
+                              </DialogHeader>
+                              <div className="flex justify-center">
+                                <img
+                                  src={activeScanner?.image}
+                                  alt="Payment QR Code"
+                                  className="max-w-full max-h-96 object-contain"
+                                />
+                              </div>
+                              {activeScanner?.description && (
+                                <p className="text-sm text-gray-600 text-center mt-2">
+                                  {activeScanner.description}
+                                </p>
+                              )}
+                            </DialogContent>
+                          </Dialog>
+                        )}
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2 border rounded-lg p-3 hover:bg-gray-50 cursor-pointer">

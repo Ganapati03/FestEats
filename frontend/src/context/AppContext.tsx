@@ -37,6 +37,7 @@ interface Order {
   total: number;
   paymentType: 'online' | 'cod';
   status: 'pending' | 'preparing' | 'delivered';
+  scannerImage?: string;
   createdAt: string;
 }
 
@@ -57,6 +58,18 @@ interface CartItemBackend {
 
 
 
+interface Scanner {
+  id: string;
+  image: string;
+  isActive: boolean;
+  description?: string;
+  uploadedBy?: {
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+}
+
 interface AppContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<User | null>;
@@ -74,7 +87,14 @@ interface AppContextType {
   orders: Order[];
   placeOrder: (paymentType: 'online' | 'cod', address: string) => Promise<string>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<any>;
+  uploadScannerImage: (orderId: string, file: File) => Promise<any>;
   refreshOrders: () => Promise<void>;
+  activeScanner: Scanner | null;
+  getActiveScanner: () => Promise<void>;
+  uploadScanner: (file: File, description?: string) => Promise<any>;
+  getAllScanners: () => Promise<Scanner[]>;
+  updateScannerStatus: (id: string, isActive: boolean) => Promise<any>;
+  deleteScanner: (id: string) => Promise<any>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -97,6 +117,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [activeScanner, setActiveScanner] = useState<Scanner | null>(null);
 
   // Load user from localStorage
   useEffect(() => {
@@ -418,6 +439,126 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const uploadScannerImage = async (orderId: string, file: File) => {
+    try {
+      const token = localStorage.getItem('token');
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const formData = new FormData();
+      formData.append('scannerImage', file);
+
+      const response = await axios.post(`${baseURL}/api/orders/${orderId}/scanner`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Update the specific order in the state
+      setOrders((prev) =>
+        prev.map((o) => (o.id === orderId ? { ...o, scannerImage: response.data.order.scannerImage } : o))
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to upload scanner image:', error);
+      throw error;
+    }
+  };
+
+  const getActiveScanner = async () => {
+    try {
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await axios.get(`${baseURL}/api/scanner/active`);
+      setActiveScanner({
+        ...response.data,
+        id: response.data._id
+      });
+    } catch (error) {
+      console.error('Failed to get active scanner:', error);
+      setActiveScanner(null);
+    }
+  };
+
+  const uploadScanner = async (file: File, description?: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const formData = new FormData();
+      formData.append('scannerImage', file);
+      if (description) {
+        formData.append('description', description);
+      }
+
+      const response = await axios.post(`${baseURL}/api/scanner/upload`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      // Refresh active scanner
+      await getActiveScanner();
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to upload scanner:', error);
+      throw error;
+    }
+  };
+
+  const getAllScanners = async (): Promise<Scanner[]> => {
+    try {
+      const token = localStorage.getItem('token');
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await axios.get(`${baseURL}/api/scanner`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return response.data.map((scanner: any) => ({
+        ...scanner,
+        id: scanner._id
+      }));
+    } catch (error) {
+      console.error('Failed to get scanners:', error);
+      throw error;
+    }
+  };
+
+  const updateScannerStatus = async (id: string, isActive: boolean) => {
+    try {
+      const token = localStorage.getItem('token');
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await axios.put(`${baseURL}/api/scanner/${id}/status`, { isActive }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Refresh active scanner
+      await getActiveScanner();
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update scanner status:', error);
+      throw error;
+    }
+  };
+
+  const deleteScanner = async (id: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await axios.delete(`${baseURL}/api/scanner/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Refresh active scanner
+      await getActiveScanner();
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to delete scanner:', error);
+      throw error;
+    }
+  };
+
   const refreshOrders = async () => {
     if (!user) return;
     try {
@@ -444,7 +585,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           quantity: item.quantity
         })),
         total: order.totalAmount,
-        status: order.deliveryStatus
+        status: order.deliveryStatus,
+        scannerImage: order.scannerImage
       })));
     } catch (error) {
       console.error('Failed to refresh orders:', error);
@@ -470,7 +612,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         orders,
         placeOrder,
         updateOrderStatus,
+        uploadScannerImage,
         refreshOrders,
+        activeScanner,
+        getActiveScanner,
+        uploadScanner,
+        getAllScanners,
+        updateScannerStatus,
+        deleteScanner,
       }}
     >
       {children}

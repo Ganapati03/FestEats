@@ -13,6 +13,7 @@ const orderSchema = new mongoose.Schema({
   paymentType: { type: String, enum: ['online', 'cod'], required: true },
   paymentStatus: { type: String, enum: ['pending', 'paid', 'failed', 'pending_verification'], default: 'pending' },
   deliveryStatus: { type: String, enum: ['pending', 'preparing', 'delivered'], default: 'pending' },
+  scannerImage: { type: String }, // Path to uploaded scanner/payment proof image
   department: { type: String, required: true },
   class: { type: String, required: true },
   address: { type: String, required: true }

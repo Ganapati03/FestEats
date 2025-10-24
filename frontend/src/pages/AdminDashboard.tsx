@@ -1,13 +1,22 @@
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { AdminSidebar } from '../components/AdminSidebar';
-import { ShoppingBag, DollarSign, CreditCard, Banknote, TrendingUp } from 'lucide-react';
+import { ShoppingBag, DollarSign, CreditCard, Banknote, TrendingUp, Upload, QrCode } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { toast } from 'sonner';
 
 export function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, orders } = useApp();
+  const { user, orders, uploadScanner, activeScanner } = useApp();
+  const [scannerFile, setScannerFile] = useState<File | null>(null);
+  const [scannerDescription, setScannerDescription] = useState('');
+  const [uploadingScanner, setUploadingScanner] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -26,6 +35,25 @@ export function AdminDashboard() {
   const pendingOrders = orders.filter((o) => o.status === 'pending').length;
   const preparingOrders = orders.filter((o) => o.status === 'preparing').length;
   const deliveredOrders = orders.filter((o) => o.status === 'delivered').length;
+
+  const handleUploadScanner = async () => {
+    if (!scannerFile) {
+      toast.error('Please select a scanner image');
+      return;
+    }
+
+    setUploadingScanner(true);
+    try {
+      await uploadScanner(scannerFile, scannerDescription);
+      toast.success('Scanner image uploaded successfully!');
+      setScannerFile(null);
+      setScannerDescription('');
+    } catch (error) {
+      toast.error('Failed to upload scanner image');
+    } finally {
+      setUploadingScanner(false);
+    }
+  };
 
   const stats = [
     {
@@ -110,6 +138,87 @@ export function AdminDashboard() {
                   <p className="text-sm text-gray-600 mb-2">Delivered</p>
                   <p className="text-4xl text-green-600">{deliveredOrders}</p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Scanner Management */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <QrCode className="w-5 h-5" />
+                Payment Scanner Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {activeScanner ? (
+                  <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                    <div>
+                      <p className="text-green-800 font-medium">Active Scanner</p>
+                      <p className="text-sm text-green-600">
+                        Students can view this QR code during online payment checkout
+                      </p>
+                      {activeScanner.description && (
+                        <p className="text-sm text-gray-600 mt-1">{activeScanner.description}</p>
+                      )}
+                    </div>
+                    <img
+                      src={activeScanner.image}
+                      alt="Active Scanner"
+                      className="w-16 h-16 object-contain border rounded"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center p-6 bg-gray-50 rounded-lg">
+                    <QrCode className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-600">No active scanner image</p>
+                    <p className="text-sm text-gray-500">Upload a QR code or payment scanner image for students</p>
+                  </div>
+                )}
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="w-full">
+                      <Upload className="w-4 h-4 mr-2" />
+                      {activeScanner ? 'Update Scanner Image' : 'Upload Scanner Image'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Upload Payment Scanner Image</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="scanner-file">Scanner Image (JPG only, max 5MB)</Label>
+                        <Input
+                          id="scanner-file"
+                          type="file"
+                          accept="image/jpeg"
+                          onChange={(e) => setScannerFile(e.target.files?.[0] || null)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="scanner-description">Description (optional)</Label>
+                        <Textarea
+                          id="scanner-description"
+                          placeholder="e.g., UPI QR Code for FestEats payments"
+                          value={scannerDescription}
+                          onChange={(e) => setScannerDescription(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleUploadScanner}
+                        disabled={!scannerFile || uploadingScanner}
+                        className="w-full"
+                      >
+                        {uploadingScanner ? 'Uploading...' : 'Upload Scanner'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardContent>
           </Card>

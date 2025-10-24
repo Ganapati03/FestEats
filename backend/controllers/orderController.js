@@ -153,3 +153,48 @@ exports.updatePaymentStatus = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+exports.uploadScannerImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    // Validate file type (only JPG allowed)
+    if (req.file.mimetype !== 'image/jpeg') {
+      return res.status(400).json({ message: 'Only JPG images are allowed' });
+    }
+
+    // Validate file size (max 5MB)
+    if (req.file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({ message: 'File size must be less than 5MB' });
+    }
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Only allow scanner uploads for online payment orders
+    if (order.paymentType !== 'online') {
+      return res.status(400).json({ message: 'Scanner images can only be uploaded for online payment orders' });
+    }
+
+    // Save the file path
+    const scannerImagePath = `/uploads/scanner/${req.file.filename}`;
+    order.scannerImage = scannerImagePath;
+    await order.save();
+
+    res.json({
+      message: 'Scanner image uploaded successfully',
+      order: {
+        id: order._id,
+        scannerImage: order.scannerImage
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
