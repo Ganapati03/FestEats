@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = "build"
+
+# Optional: set build-time env vars here OR set them in Netlify UI (recommended)
+[build.environment]
+  # VITE_API_URL = "https://festeats-backend.onrender.com"  # uncomment only if you want this in source
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
