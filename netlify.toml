@@ -2,9 +2,14 @@
   command = "npm run build"
   publish = "build"
 
-# Optional: set build-time env vars here OR set them in Netlify UI (recommended)
-[build.environment]
-  # VITE_API_URL = "https://festeats-backend.onrender.com"  # uncomment only if you want this in source
+# ⚠️ IMPORTANT: Set VITE_API_URL in Netlify UI
+# Go to: Site settings → Build & deploy → Environment variables
+# Add: VITE_API_URL = https://festeats-backend.onrender.com
+# Set it for both Production and Deploy Previews
+
+# If you want to test by committing it (NOT recommended for production), uncomment:
+# [build.environment]
+#   VITE_API_URL = "https://festeats-backend.onrender.com"
 
 [[redirects]]
   from = "/*"
