@@ -8,6 +8,7 @@ export default ({ mode }) => {
   const backend = env.VITE_API_URL || 'https://festeats-backend.onrender.com'
 
   return defineConfig({
+    base: '/',  // ensure assets load from root path
     plugins: [react()],
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL ||  'https://festeats-backend.onrender.com'),
@@ -58,7 +59,7 @@ export default ({ mode }) => {
     },
     build: {
       target: 'esnext',
-      outDir: 'dist',
+      outDir: 'build',
     },
     server: {
       port: 3000,
