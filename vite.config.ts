@@ -17,7 +17,7 @@ export default ({ mode }) => {
     },
     build: {
       target: 'esnext',
-      outDir: 'build',
+      // outDir: 'build',  // ← Remove this line to use default 'dist'
     },
     server: {
       port: 3000,
