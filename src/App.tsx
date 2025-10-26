@@ -3,6 +3,7 @@ import { AppProvider } from './context/AppContext';
 import { Toaster } from './components/ui/sonner';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
+import { DebugPanel } from './components/DebugPanel';
 
 // Pages
 import { LandingPage } from './pages/LandingPage';
@@ -49,6 +50,7 @@ export default function App() {
           </main>
           <Footer />
           <Toaster position="top-center" richColors />
+          <DebugPanel />
         </div>
       </Router>
     </AppProvider>

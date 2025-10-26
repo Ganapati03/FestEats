@@ -1,6 +1,14 @@
 [build]
+  # If this netlify.toml is inside the frontend folder, Netlify needs base set in UI or here
   command = "npm run build"
   publish = "build"
+
+# ⚠️ CRITICAL: Set VITE_API_URL in Netlify UI
+# Go to: Site settings → Build & deploy → Environment variables
+# Add variable:
+#   Key: VITE_API_URL
+#   Value: https://festeats12.onrender.com
+#   Scopes: Production builds, Deploy Previews, Branch deploys (check all)
 
 [[redirects]]
   from = "/*"
