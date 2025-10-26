@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: festeats-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        value: mongodb+srv://ganapathigouda592_db_user:0INOS4F6Mvoc4EJZ@cluster0.ryseton.mongodb.net/festeats?retryWrites=true&w=majority&appName=Cluster0
+      - key: JWT_SECRET
+        value: GaniGit commit '12345675746757464765'
+      - key: FRONTEND_URL
+        value: https://fest-eats.netlify.app
+      - key: CLOUDINARY_CLOUD_NAME
+        value: dgt81meov
+      - key: CLOUDINARY_API_KEY
+        value: 834554322559585
+      - key: CLOUDINARY_API_SECRET
+        value: Y5KmGidoHiPzllF9lAS_FHJiWVM
