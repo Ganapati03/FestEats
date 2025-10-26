@@ -8,10 +8,9 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: [
-    'https://festeats123.netlify.app',  // ✅ Your current Netlify URL
-    'http://localhost:5173',            // Vite dev server
-    'http://localhost:3000',            // Alternative local port
-    'http://localhost:5000'             // Another common port
+    'https://festeats123.netlify.app',  // Your Netlify frontend
+    'http://localhost:5173',            // Local dev
+    'http://localhost:3000'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
