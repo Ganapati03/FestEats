@@ -7,7 +7,7 @@ const app = express();
 
 // Middleware
 const defaultOrigins = [      
-  'https://fest-eats.vercel.app/',   // <-- ADD your Vercel URL here (replace this placeholder)
+  'https://fest-eats-rf3518fbb-ganapathi-goudas-projects.vercel.app/',   // <-- ADD your Vercel URL here (replace this placeholder)
   'http://localhost:5173',
   'http://localhost:3000'
 ]
