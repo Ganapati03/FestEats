@@ -6,8 +6,8 @@ const path = require('path');
 const app = express();
 
 // Middleware
-const defaultOrigins = [      
-  'https://fest-eats-rf3518fbb-ganapathi-goudas-projects.vercel.app/',   // <-- ADD your Vercel URL here (replace this placeholder)
+const defaultOrigins = [
+  'https://festeats.onrender.com/',
   'http://localhost:5173',
   'http://localhost:3000'
 ]
