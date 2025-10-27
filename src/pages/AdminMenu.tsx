@@ -13,10 +13,21 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Edit, Trash2, Search, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import axios from 'axios';
+
+// Minimal form model for new menu item
+type MenuItemForm = {
+  name: string;
+  price: number | string;
+  image?: string;
+  description?: string;
+  category?: string;
+  available?: boolean;
+};
 
 export function AdminMenu() {
   const navigate = useNavigate();
-  const { user, menuItems, addMenuItem, updateMenuItem, deleteMenuItem } = useApp();
+  const { user, menuItems, deleteMenuItem } = useApp();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [imageSearchQuery, setImageSearchQuery] = useState('');
@@ -26,6 +37,16 @@ export function AdminMenu() {
     price: '',
     imageUrl: '',
     category: 'Meals',
+    available: true,
+  });
+  const [submitting, setSubmitting] = useState(false);
+  // New item form state (fixes: 'newItem' not found)
+  const [newItem, setNewItem] = useState<MenuItemForm>({
+    name: '',
+    price: '',
+    image: '',
+    description: '',
+    category: '',
     available: true,
   });
 
@@ -39,34 +60,31 @@ export function AdminMenu() {
     return null;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.imageUrl) {
-      toast.error('Please provide an image URL or search for an image');
-      return;
-    }
-
-    const itemData = {
-      name: formData.name,
-      price: parseFloat(formData.price),
-      imageUrl: formData.imageUrl,
-      category: formData.category,
-      available: formData.available,
-    };
-
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitting(true);
     try {
-      if (editingItem) {
-        await updateMenuItem(editingItem, itemData);
-        toast.success('Menu item updated successfully!');
-      } else {
-        await addMenuItem(itemData);
-        toast.success('Menu item added successfully!');
-      }
+      // Build payload from form state (fixes: 'payload' relies on 'newItem')
+      const payload = {
+        ...newItem,
+        price: Number(newItem.price || 0),
+      };
+      await axios.post('/api/admin/menu', payload);
+      toast.success('Menu item added successfully');
+      // Reset form (fixes: 'itemData' not found)
+      setNewItem({
+        name: '',
+        price: '',
+        image: '',
+        description: '',
+        category: '',
+        available: true,
+      });
       setDialogOpen(false);
-      resetForm();
     } catch (error) {
       toast.error('Failed to save menu item. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -112,7 +130,7 @@ export function AdminMenu() {
     setIsSearchingImage(true);
     try {
       // Using Unsplash API through the unsplash_tool
-      const response = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(imageSearchQuery)}&per_page=1&client_id=YOUR_UNSPLASH_ACCESS_KEY`);
+      await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(imageSearchQuery)}&per_page=1&client_id=YOUR_UNSPLASH_ACCESS_KEY`);
       
       // For demo purposes, we'll use a predefined set of food images based on search terms
       const foodImageMap: Record<string, string> = {
@@ -347,7 +365,7 @@ export function AdminMenu() {
                     />
                   </div>
 
-                  <Button type="submit" className="w-full">
+                  <Button type="submit" className="w-full" disabled={submitting}>
                     {editingItem ? 'Update Item' : 'Add Item'}
                   </Button>
                 </form>

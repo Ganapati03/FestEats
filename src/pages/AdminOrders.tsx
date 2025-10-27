@@ -21,7 +21,6 @@ export function AdminOrders() {
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [uploadingOrderId, setUploadingOrderId] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -61,10 +60,8 @@ export function AdminOrders() {
     try {
       await updateOrderStatus(orderId, status);
       toast.success('Order status updated successfully!');
-      // Refresh orders to get the latest data
       await refreshOrders();
     } catch (error) {
-      console.error('Status update error:', error);
       toast.error('Failed to update order status. Please try again.');
     } finally {
       setIsUpdating(null);
@@ -79,7 +76,7 @@ export function AdminOrders() {
       try {
         await refreshOrders();
       } catch (error) {
-        console.error('Error checking for new orders:', error);
+        // Silent fail - will retry on next interval
       }
     };
 
@@ -98,7 +95,6 @@ export function AdminOrders() {
       await refreshOrders();
       toast.success('Orders refreshed successfully!');
     } catch (error) {
-      console.error('Refresh error:', error);
       toast.error('Failed to refresh orders. Please try again.');
     } finally {
       setIsRefreshing(false);
@@ -110,9 +106,8 @@ export function AdminOrders() {
     try {
       await uploadScannerImage(orderId, file);
       toast.success('Scanner image uploaded successfully!');
-      await refreshOrders(); // Refresh to get updated data
+      await refreshOrders();
     } catch (error: any) {
-      console.error('Upload error:', error);
       toast.error(error.response?.data?.message || 'Failed to upload scanner image. Please try again.');
     } finally {
       setUploadingOrderId(null);
@@ -143,206 +138,340 @@ export function AdminOrders() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)]">
-      <AdminSidebar />
-      <div className="flex-1 p-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-gray-800">Orders Management</h1>
-            <Button
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </Button>
-          </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex">
+        <AdminSidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-gray-800">Orders Management</h1>
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            </div>
 
-          {/* Filters */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    type="text"
-                    placeholder="Search by name, phone, or order ID..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+            {/* Filters */}
+            <Card className="mb-6">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      type="text"
+                      placeholder="Search orders..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 h-11" // Larger touch target
+                    />
+                  </div>
+                  <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                    <SelectTrigger className="h-11">
+                      <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4" />
+                        <SelectValue placeholder="Department" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept === 'All' ? 'All Departments' : dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterPayment} onValueChange={setFilterPayment}>
+                    <SelectTrigger className="h-11 sm:col-span-2 lg:col-span-1">
+                      <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4" />
+                        <SelectValue placeholder="Payment" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Payments</SelectItem>
+                      <SelectItem value="online">Online</SelectItem>
+                      <SelectItem value="cod">COD</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <Filter className="w-4 h-4" />
-                      <SelectValue placeholder="Filter by department" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept === 'All' ? 'All Departments' : dept}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={filterPayment} onValueChange={setFilterPayment}>
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <Filter className="w-4 h-4" />
-                      <SelectValue placeholder="Filter by payment" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Payments</SelectItem>
-                    <SelectItem value="online">Online</SelectItem>
-                    <SelectItem value="cod">COD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Orders Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>All Orders ({filteredOrders.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {filteredOrders.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No orders found</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Order ID</TableHead>
-                        <TableHead>Student</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Department/Class</TableHead>
-                        <TableHead>Address</TableHead>
-                        <TableHead>Items</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Payment</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+            {/* Orders Table/Cards - Professional styling */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Orders ({filteredOrders.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {filteredOrders.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">No orders found</p>
+                ) : (
+                  <>
+                    {/* Desktop Table (hidden on mobile) */}
+                    <div className="hidden lg:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Order ID</TableHead>
+                            <TableHead>Student</TableHead>
+                            <TableHead>Contact</TableHead>
+                            <TableHead>Department/Class</TableHead>
+                            <TableHead>Address</TableHead>
+                            <TableHead>Items</TableHead>
+                            <TableHead>Total</TableHead>
+                            <TableHead>Payment</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredOrders.map((order) => (
+                            <TableRow key={order.id}>
+                              <TableCell className="text-xs text-gray-600">
+                                {order.id.slice(-8)}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="text-gray-800">{order.studentName}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="text-sm">{order.phone || 'N/A'}</p>
+                                  <p className="text-xs text-gray-500">{order.email || 'N/A'}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="text-sm">{order.department}</p>
+                                  <p className="text-xs text-gray-500">{order.class}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-xs">
+                                  <p className="text-sm text-gray-700 truncate" title={order.address}>
+                                    {order.address || 'N/A'}
+                                  </p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="space-y-1">
+                                  {order.items.slice(0, 2).map((item) => (
+                                    <p key={item.id} className="text-xs text-gray-600">
+                                      {item.name} x{item.quantity}
+                                    </p>
+                                  ))}
+                                  {order.items.length > 2 && (
+                                    <p className="text-xs text-gray-500">
+                                      +{order.items.length - 2} more
+                                    </p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-primary">₹{order.total}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  {order.paymentType === 'online' ? (
+                                    <>
+                                      <CreditCard className="w-4 h-4 text-secondary" />
+                                      <span className="text-sm">Online</span>
+                                      {order.scannerImage ? (
+                                        <Dialog>
+                                          <DialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="ml-2 p-1 h-6 w-6"
+                                            >
+                                              <Eye className="w-3 h-3" />
+                                            </Button>
+                                          </DialogTrigger>
+                                          <DialogContent className="max-w-md">
+                                            <DialogHeader>
+                                              <DialogTitle>Payment Proof</DialogTitle>
+                                            </DialogHeader>
+                                            <div className="flex justify-center">
+                                              <img
+                                                src={`http://localhost:5000${order.scannerImage}`}
+                                                alt="Payment proof"
+                                                className="max-w-full max-h-96 object-contain"
+                                              />
+                                            </div>
+                                          </DialogContent>
+                                        </Dialog>
+                                      ) : (
+                                        <div className="ml-2">
+                                          <input
+                                            type="file"
+                                            accept="image/jpeg"
+                                            onChange={(e) => handleFileSelect(order.id, e)}
+                                            className="hidden"
+                                            id={`scanner-${order.id}`}
+                                            disabled={uploadingOrderId === order.id}
+                                          />
+                                          <label htmlFor={`scanner-${order.id}`}>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="p-1 h-6 w-6"
+                                              asChild
+                                            >
+                                              <span>
+                                                <Upload className="w-3 h-3" />
+                                              </span>
+                                            </Button>
+                                          </label>
+                                          {uploadingOrderId === order.id && (
+                                            <span className="text-xs text-gray-500 ml-1">Uploading...</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Banknote className="w-4 h-4 text-green-600" />
+                                      <span className="text-sm">COD</span>
+                                    </>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Select
+                                  value={order.status}
+                                  onValueChange={(value: 'pending' | 'preparing' | 'delivered') =>
+                                    handleStatusChange(order.id, value)
+                                  }
+                                  disabled={isUpdating === order.id}
+                                >
+                                  <SelectTrigger className="w-32">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="pending">
+                                      <Badge className={`${statusColors.pending} text-white`}>
+                                        Pending
+                                      </Badge>
+                                    </SelectItem>
+                                    <SelectItem value="preparing">
+                                      <Badge className={`${statusColors.preparing} text-white`}>
+                                        Preparing
+                                      </Badge>
+                                    </SelectItem>
+                                    <SelectItem value="delivered">
+                                      <Badge className={`${statusColors.delivered} text-white`}>
+                                        Delivered
+                                      </Badge>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                {isUpdating === order.id && (
+                                  <div className="text-xs text-gray-500 mt-1">Updating...</div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Mobile Card View (hidden on desktop) */}
+                    <div className="lg:hidden space-y-4">
                       {filteredOrders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="text-xs text-gray-600">
-                            {order.id.slice(-8)}
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="text-gray-800">{order.studentName}</p>
+                        <Card key={order.id} className="border-l-4 border-l-primary">
+                          <CardContent className="p-4">
+                            {/* Order Header */}
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <p className="font-semibold text-gray-800">{order.studentName}</p>
+                                <p className="text-xs text-gray-500">#{order.id.slice(-8)}</p>
+                              </div>
+                              <Badge className={`${statusColors[order.status]} text-white text-xs px-2 py-1`}>
+                                {order.status}
+                              </Badge>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="text-sm">{order.phone || 'N/A'}</p>
-                              <p className="text-xs text-gray-500">{order.email || 'N/A'}</p>
+
+                            {/* Order Details Grid */}
+                            <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                              <div>
+                                <p className="text-gray-500 text-xs">Phone</p>
+                                <p className="text-gray-800">{order.phone || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 text-xs">Department</p>
+                                <p className="text-gray-800">{order.department}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 text-xs">Class</p>
+                                <p className="text-gray-800">{order.class}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500 text-xs">Total</p>
+                                <p className="text-primary font-semibold">₹{order.total}</p>
+                              </div>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="text-sm">{order.department}</p>
-                              <p className="text-xs text-gray-500">{order.class}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-xs">
-                              <p className="text-sm text-gray-700 truncate" title={order.address}>
-                                {order.address || 'N/A'}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
+
+                            {/* Items Summary */}
+                            <div className="bg-gray-50 rounded p-2 mb-3">
+                              <p className="text-xs text-gray-600 mb-1">Items:</p>
                               {order.items.slice(0, 2).map((item) => (
-                                <p key={item.id} className="text-xs text-gray-600">
-                                  {item.name} x{item.quantity}
+                                <p key={item.id} className="text-xs text-gray-700">
+                                  • {item.name} ×{item.quantity}
                                 </p>
                               ))}
                               {order.items.length > 2 && (
-                                <p className="text-xs text-gray-500">
-                                  +{order.items.length - 2} more
+                                <p className="text-xs text-gray-500 mt-1">
+                                  +{order.items.length - 2} more items
                                 </p>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-primary">₹{order.total}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              {order.paymentType === 'online' ? (
-                                <>
-                                  <CreditCard className="w-4 h-4 text-secondary" />
-                                  <span className="text-sm">Online</span>
-                                  {order.scannerImage ? (
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="ml-2 p-1 h-6 w-6"
-                                          onClick={() => setSelectedImage(order.scannerImage!)}
-                                        >
-                                          <Eye className="w-3 h-3" />
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="max-w-md">
-                                        <DialogHeader>
-                                          <DialogTitle>Payment Proof</DialogTitle>
-                                        </DialogHeader>
-                                        <div className="flex justify-center">
-                                          <img
-                                            src={`http://localhost:5000${order.scannerImage}`}
-                                            alt="Payment proof"
-                                            className="max-w-full max-h-96 object-contain"
-                                          />
-                                        </div>
-                                      </DialogContent>
-                                    </Dialog>
-                                  ) : (
-                                    <div className="ml-2">
-                                      <input
-                                        type="file"
-                                        accept="image/jpeg"
-                                        onChange={(e) => handleFileSelect(order.id, e)}
-                                        className="hidden"
-                                        id={`scanner-${order.id}`}
-                                        disabled={uploadingOrderId === order.id}
+
+                            {/* Payment Type */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                {order.paymentType === 'online' ? (
+                                  <>
+                                    <CreditCard className="w-4 h-4 text-secondary" />
+                                    <span className="text-sm">Online Payment</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Banknote className="w-4 h-4 text-green-600" />
+                                    <span className="text-sm">Cash on Delivery</span>
+                                  </>
+                                )}
+                              </div>
+                              {order.paymentType === 'online' && order.scannerImage && (
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-md">
+                                    <DialogHeader>
+                                      <DialogTitle>Payment Proof</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="flex justify-center">
+                                      <img
+                                        src={`http://localhost:5000${order.scannerImage}`}
+                                        alt="Payment proof"
+                                        className="max-w-full max-h-96 object-contain"
                                       />
-                                      <label htmlFor={`scanner-${order.id}`}>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="p-1 h-6 w-6"
-                                          asChild
-                                        >
-                                          <span>
-                                            <Upload className="w-3 h-3" />
-                                          </span>
-                                        </Button>
-                                      </label>
-                                      {uploadingOrderId === order.id && (
-                                        <span className="text-xs text-gray-500 ml-1">Uploading...</span>
-                                      )}
                                     </div>
-                                  )}
-                                </>
-                              ) : (
-                                <>
-                                  <Banknote className="w-4 h-4 text-green-600" />
-                                  <span className="text-sm">COD</span>
-                                </>
+                                  </DialogContent>
+                                </Dialog>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell>
+
+                            {/* Status Update */}
                             <Select
                               value={order.status}
                               onValueChange={(value: 'pending' | 'preparing' | 'delivered') =>
@@ -350,40 +479,34 @@ export function AdminOrders() {
                               }
                               disabled={isUpdating === order.id}
                             >
-                              <SelectTrigger className="w-32">
+                              <SelectTrigger className="w-full h-11">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="pending">
-                                  <Badge className={`${statusColors.pending} text-white`}>
-                                    Pending
-                                  </Badge>
+                                  <Badge className={`${statusColors.pending} text-white`}>Pending</Badge>
                                 </SelectItem>
                                 <SelectItem value="preparing">
-                                  <Badge className={`${statusColors.preparing} text-white`}>
-                                    Preparing
-                                  </Badge>
+                                  <Badge className={`${statusColors.preparing} text-white`}>Preparing</Badge>
                                 </SelectItem>
                                 <SelectItem value="delivered">
-                                  <Badge className={`${statusColors.delivered} text-white`}>
-                                    Delivered
-                                  </Badge>
+                                  <Badge className={`${statusColors.delivered} text-white`}>Delivered</Badge>
                                 </SelectItem>
                               </SelectContent>
                             </Select>
                             {isUpdating === order.id && (
-                              <div className="text-xs text-gray-500 mt-1">Updating...</div>
+                              <p className="text-xs text-gray-500 text-center mt-2">Updating...</p>
                             )}
-                          </TableCell>
-                        </TableRow>
+                          </CardContent>
+                        </Card>
                       ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </main>
       </div>
     </div>
   );

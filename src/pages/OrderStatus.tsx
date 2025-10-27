@@ -2,16 +2,37 @@ import { useParams, Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
 import { Clock, Package, CheckCircle, CreditCard, Banknote, Loader2 } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
+interface OrderItem {
+  id: string;
+  name: string;
+  imageUrl: string;
+  quantity: number;
+  price: number;
+}
+
+interface Order {
+  id: string;
+  studentId: string;
+  studentName: string;
+  department: string;
+  class: string;
+  phone: string;
+  email: string;
+  items: OrderItem[];
+  total: number;
+  status: 'pending' | 'preparing' | 'delivered';
+  paymentType: 'online' | 'cod';
+}
+
 export function OrderStatus() {
   const { orderId } = useParams();
   const { orders, user, refreshOrders } = useApp();
-  const [order, setOrder] = useState(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,8 +63,7 @@ export function OrderStatus() {
             });
             const backendOrder = response.data.find((o: any) => o._id === orderId);
             if (backendOrder) {
-              const mappedOrder = {
-                ...backendOrder,
+              const mappedOrder: Order = {
                 id: backendOrder._id,
                 studentId: backendOrder.userId?._id || backendOrder.userId,
                 studentName: backendOrder.userId?.name || 'Unknown',
@@ -55,17 +75,19 @@ export function OrderStatus() {
                   ...item.foodId,
                   id: item.foodId._id,
                   imageUrl: item.foodId.image,
-                  quantity: item.quantity
+                  quantity: item.quantity,
+                  price: item.foodId.price
                 })),
                 total: backendOrder.totalAmount,
-                status: backendOrder.deliveryStatus
+                status: backendOrder.deliveryStatus,
+                paymentType: backendOrder.paymentType
               };
               setOrder(mappedOrder);
             }
           }
         }
       } catch (error) {
-        console.error('Failed to fetch order:', error);
+        // Error already handled in UI with loading state
       } finally {
         setLoading(false);
       }
@@ -133,7 +155,6 @@ export function OrderStatus() {
   };
 
   const currentStatus = statusConfig[order.status];
-  const CurrentIcon = currentStatus.icon;
 
   return (
     <div className="min-h-[calc(100vh-64px)] py-8">
@@ -160,8 +181,8 @@ export function OrderStatus() {
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-center mb-8">
-              {['pending', 'preparing', 'delivered'].map((status, index) => {
-                const config = statusConfig[status as keyof typeof statusConfig];
+              {(['pending', 'preparing', 'delivered'] as const).map((status, index) => {
+                const config = statusConfig[status];
                 const Icon = config.icon;
                 const isActive = status === order.status;
                 const isPast =

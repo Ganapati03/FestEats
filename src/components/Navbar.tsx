@@ -70,8 +70,8 @@ export function Navbar() {
   );
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4">
+    <nav className="bg-white shadow-md sticky top-0 z-50 w-full max-[430px]:w-[100vw]">
+      <div className="mx-auto w-full max-[430px]:w-[100vw] px-0 md:px-4 py-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">

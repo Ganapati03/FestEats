@@ -9,9 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { User, Save, ArrowLeft } from 'lucide-react';
 
+// Fix: add missing type alias for profile form data
+type ProfileFormData = {
+  name: string;
+  email: string;
+  phone?: string;
+  department?: string;
+  class?: string;
+};
+
 export function Profile() {
   const navigate = useNavigate();
-  const { user, updateProfile } = useApp();
+  const app = useApp();
+  const { user } = app;
+  const updateProfile =
+    (app as { updateProfile?: (data: ProfileFormData) => Promise<void> }).updateProfile;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -46,12 +58,12 @@ export function Profile() {
     setLoading(true);
 
     try {
-      const success = await updateProfile(formData);
-      if (success) {
-        toast.success('Profile updated successfully!');
-      } else {
-        toast.error('Failed to update profile. Please try again.');
+      if (!updateProfile) {
+        toast.error('Profile updates are currently unavailable.');
+        return;
       }
+      await updateProfile(formData);
+      toast.success('Profile updated successfully!');
     } catch (error) {
       toast.error('An error occurred while updating profile.');
     } finally {

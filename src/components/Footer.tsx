@@ -2,8 +2,8 @@ import { Facebook, Instagram, Twitter, Mail, Phone } from 'lucide-react';
 
 export function Footer() {
   return (
-    <footer className="bg-white border-t mt-auto">
-      <div className="container-fluid py-8 md:py-12 lg:py-16">
+    <footer className="bg-white border-t mt-auto w-[100vw] md:w-full">
+      <div className="container-fluid w-[100vw] md:w-full py-8 md:py-12 lg:py-16 px-0 sm:px-6 lg:px-12">
         {/* Grid: 1 col mobile, 2 cols tablet, 3 cols desktop */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
           
