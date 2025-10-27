@@ -17,7 +17,7 @@ export default ({ mode }) => {
     },
     build: {
       target: 'esnext',
-      outDir: 'build',  // ✅ Matches vercel.json outputDirectory
+      outDir: 'dist',  // ✅ Matches vercel.json outputDirectory
     },
     server: {
       port: 3000,
