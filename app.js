@@ -7,7 +7,7 @@ const app = express();
 
 // Middleware
 const defaultOrigins = [
-  'https://festeats.onrender.com/',
+  'https://festeats.onrender.com',
   'http://localhost:5173',
   'http://localhost:3000'
 ]
