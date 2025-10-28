@@ -15,15 +15,7 @@ import { toast } from 'sonner';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import axios from 'axios';
 
-// Minimal form model for new menu item
-type MenuItemForm = {
-  name: string;
-  price: number | string;
-  image?: string;
-  description?: string;
-  category?: string;
-  available?: boolean;
-};
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export function AdminMenu() {
   const navigate = useNavigate();
@@ -40,15 +32,6 @@ export function AdminMenu() {
     available: true,
   });
   const [submitting, setSubmitting] = useState(false);
-  // New item form state (fixes: 'newItem' not found)
-  const [newItem, setNewItem] = useState<MenuItemForm>({
-    name: '',
-    price: '',
-    image: '',
-    description: '',
-    category: '',
-    available: true,
-  });
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -64,22 +47,40 @@ export function AdminMenu() {
     event.preventDefault();
     setSubmitting(true);
     try {
-      // Build payload from form state (fixes: 'payload' relies on 'newItem')
+      // Basic validation
+      if (!formData.name.trim()) {
+        toast.error('Item name is required');
+        return;
+      }
+      const priceNum = Number(formData.price);
+      if (Number.isNaN(priceNum) || priceNum <= 0) {
+        toast.error('Enter a valid price greater than 0');
+        return;
+      }
+
+      // Build payload from formData
       const payload = {
-        ...newItem,
-        price: Number(newItem.price || 0),
+        name: formData.name.trim(),
+        price: priceNum,
+        imageUrl: formData.imageUrl, // backend may map this to 'image'
+        category: formData.category,
+        available: formData.available,
       };
-      await axios.post('/api/admin/menu', payload);
-      toast.success('Menu item added successfully');
-      // Reset form (fixes: 'itemData' not found)
-      setNewItem({
-        name: '',
-        price: '',
-        image: '',
-        description: '',
-        category: '',
-        available: true,
-      });
+
+      // Auth header if token exists
+      const token = localStorage.getItem('token');
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+
+      if (editingItem) {
+        await axios.put(`${API_BASE}/api/admin/menu/${editingItem}`, payload, config);
+        toast.success('Menu item updated successfully');
+      } else {
+        await axios.post(`${API_BASE}/api/admin/menu`, payload, config);
+        toast.success('Menu item added successfully');
+      }
+
+      // Reset and close
+      resetForm();
       setDialogOpen(false);
     } catch (error) {
       toast.error('Failed to save menu item. Please try again.');
@@ -129,7 +130,7 @@ export function AdminMenu() {
 
     setIsSearchingImage(true);
     try {
-      // Using Unsplash API through the unsplash_tool
+      // Using Unsplash API through the unsplash_tool (call not used, keep as no-op to avoid TS warnings)
       await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(imageSearchQuery)}&per_page=1&client_id=YOUR_UNSPLASH_ACCESS_KEY`);
       
       // For demo purposes, we'll use a predefined set of food images based on search terms
