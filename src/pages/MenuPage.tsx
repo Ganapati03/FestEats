@@ -39,7 +39,7 @@ export function MenuPage() {
     }
   };
 
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartItemCount = cart.reduce((sum: number, item) => sum + item.quantity, 0);
 
   const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 

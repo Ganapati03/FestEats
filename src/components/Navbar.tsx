@@ -11,7 +11,7 @@ export function Navbar() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartItemCount = cart.reduce((sum: number, item) => sum + item.quantity, 0);
 
   const navLinks = user?.role === 'student' ? (
     <>

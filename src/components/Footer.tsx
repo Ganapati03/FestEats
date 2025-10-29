@@ -13,9 +13,9 @@ export function Footer() {
               <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
                 <span className="text-white text-2xl" role="img" aria-label="burger">🍔</span>
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-orange-400 bg-clip-text text-transparent">
+              <h2 className="text-2xl font-bold text-orange-500">
                 FestEats
-              </span>
+              </h2>
             </div>
             <p className="text-gray-600 text-sm md:text-base leading-relaxed max-w-xs mx-auto sm:mx-0">
               Your favorite food delivery app for college fests. Quick, easy, and delicious!
@@ -24,35 +24,35 @@ export function Footer() {
 
           {/* Contact Section */}
           <div className="text-center sm:text-left">
-            <h3 className="font-bold text-lg mb-4">Contact Us</h3>
+            <h3 className="font-bold text-lg mb-4 text-gray-800">Contact Us</h3>
             <div className="space-y-3">
               {/* Touch-friendly phone link */}
               <a 
-                href="tel:+919876543210"
+                href="tel:+919482456033"
                 className="flex items-center justify-center sm:justify-start gap-3 text-gray-600 hover:text-orange-500 transition-colors group"
               >
                 <div className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg group-hover:bg-orange-100 transition-colors">
                   <Phone className="w-5 h-5" />
                 </div>
-                <span className="text-sm md:text-base">+91 98765 43210</span>
+                <span className="text-sm md:text-base">+91 94824 56033</span>
               </a>
 
               {/* Touch-friendly email link */}
               <a 
-                href="mailto:support@festeats.com"
+                href="mailto:ganapathigouda379@gmail.com"
                 className="flex items-center justify-center sm:justify-start gap-3 text-gray-600 hover:text-orange-500 transition-colors group"
               >
                 <div className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-lg group-hover:bg-orange-100 transition-colors">
                   <Mail className="w-5 h-5" />
                 </div>
-                <span className="text-sm md:text-base break-all">support@festeats.com</span>
+                <span className="text-sm md:text-base break-all">ganapathigouda379@gmail.com</span>
               </a>
             </div>
           </div>
 
           {/* Social Media Section */}
           <div className="text-center sm:text-left sm:col-span-2 lg:col-span-1">
-            <h3 className="font-bold text-lg mb-4">Follow Us</h3>
+            <h3 className="font-bold text-lg mb-4 text-gray-800">Follow Us</h3>
             {/* Touch-friendly social icons (min 44×44px) */}
             <div className="flex gap-3 justify-center sm:justify-start">
               <a
@@ -83,7 +83,7 @@ export function Footer() {
         {/* Copyright - responsive text size */}
         <div className="border-t mt-8 pt-6 text-center">
           <p className="text-xs sm:text-sm text-gray-500">
-            &copy; 2025 FestEats. All rights reserved. Made with{' '}
+            &copy; 2025 <span className="font-semibold text-orange-500">FestEats</span>. All rights reserved. Made with{' '}
             <span className="text-red-500" role="img" aria-label="love">❤️</span>{' '}
             for college students.
           </p>

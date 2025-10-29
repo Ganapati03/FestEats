@@ -22,15 +22,25 @@ export function AdminLogin() {
     setLoading(true);
 
     try {
-      const user = await login(formData.email, formData.password);
+      console.log('Admin login attempt:', formData.email);
+      const user = await login(formData.email, formData.password, 'admin');
+      console.log('Admin login successful:', user);
+
       if (user && user.role === 'admin') {
         toast.success('Admin login successful!');
         navigate('/admin/dashboard');
       } else {
+        console.error('User role mismatch:', user?.role);
         toast.error('Invalid admin credentials.');
       }
     } catch (error) {
-      toast.error('An error occurred. Please try again.');
+      console.error('Admin login error:', error);
+      let errorMessage = 'An error occurred. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      console.error('Displaying error to user:', errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

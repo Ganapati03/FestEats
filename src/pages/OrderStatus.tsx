@@ -35,6 +35,8 @@ export function OrderStatus() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
     const fetchOrder = async () => {
       if (!orderId) return;
@@ -57,7 +59,7 @@ export function OrderStatus() {
           // Try to fetch specific order from backend
           const token = localStorage.getItem('token');
           if (token && user) {
-            const endpoint = user.role === 'admin' ? 'http://localhost:5000/api/orders' : 'http://localhost:5000/api/orders/my';
+            const endpoint = user.role === 'admin' ? `${API_BASE}/api/orders` : `${API_BASE}/api/orders/my`;
             const response = await axios.get(endpoint, {
               headers: { Authorization: `Bearer ${token}` }
             });
@@ -94,7 +96,7 @@ export function OrderStatus() {
     };
 
     fetchOrder();
-  }, [orderId, orders, refreshOrders, user]);
+  }, [orderId, orders, refreshOrders, user, API_BASE]);
 
   if (loading) {
     return (

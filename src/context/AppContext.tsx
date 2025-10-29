@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { toast } from 'sonner';
 
 interface User {
   id: string;
@@ -38,319 +39,437 @@ interface Order {
   paymentType: 'online' | 'cod';
   status: 'pending' | 'preparing' | 'delivered';
   scannerImage?: string;
-  createdAt: string;
-}
-
-interface BackendMenuItem {
-  _id: string;
-  name: string;
-  price: number;
-  image: string;
-  imageUrl?: string; // Add optional imageUrl property
-  available: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CartItemBackend {
-  foodId: BackendMenuItem;
-  quantity: number;
-}
-
-
-
-interface Scanner {
-  id: string;
-  image: string;
-  isActive: boolean;
-  description?: string;
-  uploadedBy?: {
-    name: string;
-    email: string;
-  };
-  createdAt: string;
+  createdAt?: string;
 }
 
 interface AppContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<User | null>;
+  login: (email: string, password: string, role?: 'student' | 'admin') => Promise<User>;
   register: (userData: Omit<User, 'id' | 'role'>) => Promise<boolean>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
   logout: () => void;
   cart: CartItem[];
-  addToCart: (item: MenuItem) => void;
-  removeFromCart: (itemId: string) => void;
-  updateCartItemQuantity: (itemId: string, quantity: number) => void;
-  clearCart: () => void;
+  addToCart: (item: MenuItem) => Promise<void>;
+  removeFromCart: (itemId: string) => Promise<void>;
+  updateCartItemQuantity: (itemId: string, quantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
   menuItems: MenuItem[];
-  addMenuItem: (item: Omit<MenuItem, 'id'>) => void;
-  updateMenuItem: (id: string, item: Partial<MenuItem>) => void;
-  deleteMenuItem: (id: string) => void;
+  addMenuItem: (item: Omit<MenuItem, 'id'>) => Promise<MenuItem>;
+  updateMenuItem: (id: string, item: Partial<MenuItem>) => Promise<void>;
+  deleteMenuItem: (id: string) => Promise<void>;
   orders: Order[];
   placeOrder: (paymentType: 'online' | 'cod', address: string) => Promise<string>;
-  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<any>;
-  uploadScannerImage: (orderId: string, file: File) => Promise<any>;
+  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   refreshOrders: () => Promise<void>;
-  activeScanner: Scanner | null;
-  getActiveScanner: () => Promise<void>;
-  uploadScanner: (file: File, description?: string) => Promise<any>;
-  getAllScanners: () => Promise<Scanner[]>;
-  updateScannerStatus: (id: string, isActive: boolean) => Promise<any>;
-  deleteScanner: (id: string) => Promise<any>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-const mockMenuItems: MenuItem[] = [
-  { id: '1', name: 'Burger Deluxe', price: 120, imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400', category: 'Meals', available: true },
-  { id: '2', name: 'Pizza Margherita', price: 200, imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400', category: 'Meals', available: true },
-  { id: '3', name: 'French Fries', price: 60, imageUrl: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400', category: 'Snacks', available: true },
-  { id: '4', name: 'Samosa', price: 30, imageUrl: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400', category: 'Snacks', available: true },
-  { id: '5', name: 'Cold Coffee', price: 80, imageUrl: 'https://images.unsplash.com/photo-1517487881594-2787fef5ebf7?w=400', category: 'Drinks', available: true },
-  { id: '6', name: 'Mango Shake', price: 90, imageUrl: 'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4?w=400', category: 'Drinks', available: true },
-  { id: '7', name: 'Chicken Biryani', price: 150, imageUrl: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=400', category: 'Meals', available: true },
-  { id: '8', name: 'Pav Bhaji', price: 100, imageUrl: 'https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=400', category: 'Meals', available: true },
-  { id: '9', name: 'Spring Rolls', price: 70, imageUrl: 'https://images.unsplash.com/photo-1619895092538-128341789043?w=400', category: 'Snacks', available: true },
-  { id: '10', name: 'Lemonade', price: 50, imageUrl: 'https://images.unsplash.com/photo-1523677011781-c91d1bbe2f0a?w=400', category: 'Drinks', available: true },
-];
+// Configure axios defaults
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+axios.defaults.headers.common['Accept'] = 'application/json';
+
+// Helper function for retry logic
+const fetchWithRetry = async (url: string, options: any = {}, retries = 3, delay = 2000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios(url, options);
+      return response;
+    } catch (error) {
+      if (i === retries - 1) throw error;
+      
+      if (axios.isAxiosError(error) && error.code === 'ERR_NETWORK') {
+        console.log(`Retry ${i + 1}/${retries} - Waiting for backend to wake up...`);
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error('Max retries reached');
+};
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [activeScanner, setActiveScanner] = useState<Scanner | null>(null);
 
   // Load user from localStorage
   useEffect(() => {
     const savedUser = localStorage.getItem('festEatsUser');
-    if (savedUser) setUser(JSON.parse(savedUser));
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('festEatsUser');
+      }
+    }
   }, []);
-
-  // Save data to localStorage
-  useEffect(() => {
-    if (user) localStorage.setItem('festEatsUser', JSON.stringify(user));
-    else localStorage.removeItem('festEatsUser');
-  }, [user]);
 
   // Load menu items from backend
   useEffect(() => {
     const fetchMenuItems = async () => {
       try {
-        const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const response = await axios.get(`${baseURL}/api/food`);
-        console.log('Raw menu items from backend:', response.data);
+        console.log('Fetching menu items from:', `${API_BASE}/api/food`);
+        toast.info('Loading menu items...', { duration: 2000 });
         
-        setMenuItems(response.data.map((item: BackendMenuItem) => ({
-          ...item,
-          id: item._id,
-          imageUrl: item.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
-          available: item.available
-        })));
+        const response = await fetchWithRetry(`${API_BASE}/api/food`, { method: 'GET' });
         
-        console.log('Mapped menu items:', response.data.map((item: BackendMenuItem) => ({
-          id: item._id,
-          name: item.name,
-          imageUrl: item.image,
-        })));
+        if (response) {
+          console.log('Raw menu items from backend:', response.data);
+          
+          const items = response.data.map((item: any) => ({
+            id: item._id,
+            name: item.name,
+            price: item.price,
+            imageUrl: item.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
+            category: item.category,
+            available: item.available ?? true,
+          }));
+          
+          setMenuItems(items);
+          toast.success('Menu items loaded successfully!', { duration: 2000 });
+        }
       } catch (error) {
-        console.error('Failed to fetch menu items');
-        // Fallback to mock data if backend is not available
-        setMenuItems(mockMenuItems);
+        if (axios.isAxiosError(error)) {
+          console.error('Menu fetch error details:', {
+            message: error.message,
+            code: error.code,
+            status: error.response?.status,
+          });
+          
+          if (error.code === 'ERR_NETWORK' || !error.response) {
+            toast.error(
+              'Cannot connect to server. Menu items unavailable.',
+              {
+                description: 'Please check your internet connection or try again later.',
+                duration: 5000,
+              }
+            );
+          }
+        }
+        setMenuItems([]);
       }
     };
     fetchMenuItems();
   }, []);
 
-  // Load cart and orders from backend when user logs in
+  // Load cart and orders when user logs in
   useEffect(() => {
     if (user) {
-      const fetchCart = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-          const response = await axios.get(`${baseURL}/api/cart`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setCart(response.data.items.map((item: CartItemBackend) => ({
-            ...item.foodId,
-            id: item.foodId._id,
-            imageUrl: item.foodId.image,
-            quantity: item.quantity
-          })));
-        } catch (error) {
-          console.error('Failed to fetch cart');
-        }
-      };
-
-      const fetchOrders = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-          const endpoint = user.role === 'admin' ? `${baseURL}/api/orders` : `${baseURL}/api/orders/my`;
-          const response = await axios.get(endpoint, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-      setOrders(response.data.map((order: any) => ({
-        ...order,
-        id: order._id,
-        studentId: order.userId?._id || order.userId,
-        studentName: order.studentName || order.userId?.name || 'Unknown',
-        department: order.department,
-        class: order.class,
-        phone: order.studentPhone || order.userId?.phone || '',
-        email: order.studentEmail || order.userId?.email || '',
-        address: order.address || '',
-        items: order.items.map((item: any) => ({
-          ...item.foodId,
-          id: item.foodId._id,
-          imageUrl: item.foodId.image,
-          quantity: item.quantity
-        })),
-        total: order.totalAmount,
-        status: order.deliveryStatus
-      })));
-        } catch (error) {
-          console.error('Failed to fetch orders');
-        }
-      };
-
       if (user.role === 'student') {
         fetchCart();
       }
       fetchOrders();
+    } else {
+      setCart([]);
+      setOrders([]);
     }
   }, [user]);
 
-  const login = async (email: string, password: string): Promise<User | null> => {
+  const fetchCart = async () => {
     try {
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      console.log('Login request:', { email, password });
-      const response = await axios.post(`${baseURL}/api/auth/login`, { email, password });
-      console.log('Login response:', response);
-      const { token, user } = response.data;
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await axios.get(`${API_BASE}/api/cart`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const cartItems = (response.data.items || []).map((item: any) => ({
+        id: item.foodId?._id || item.foodId,
+        name: item.foodId?.name || 'Unknown Item',
+        price: item.foodId?.price || 0,
+        imageUrl: item.foodId?.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
+        category: item.foodId?.category || 'Other',
+        available: item.foodId?.available ?? true,
+        quantity: item.quantity || 1,
+      }));
+      
+      setCart(cartItems);
+    } catch (error) {
+      console.error('Failed to fetch cart:', error);
+      setCart([]);
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !user) return;
+
+      const endpoint = user.role === 'admin' 
+        ? `${API_BASE}/api/orders` 
+        : `${API_BASE}/api/orders/my`;
+      
+      const response = await axios.get(endpoint, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const ordersList = (response.data || []).map((order: any) => ({
+        id: order._id,
+        studentId: order.userId?._id || order.userId || 'unknown',
+        studentName: order.studentName || order.userId?.name || 'Unknown',
+        department: order.department || 'N/A',
+        class: order.class || 'N/A',
+        phone: order.studentPhone || order.userId?.phone || '',
+        email: order.studentEmail || order.userId?.email || '',
+        address: order.address || '',
+        items: (order.items || []).map((item: any) => ({
+          id: item.foodId?._id || item.id || 'unknown',
+          name: item.foodId?.name || item.name || 'Unknown Item',
+          price: item.foodId?.price || item.price || 0,
+          imageUrl: item.foodId?.image || item.imageUrl || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
+          category: item.foodId?.category || 'Other',
+          available: true,
+          quantity: item.quantity || 1,
+        })),
+        total: order.totalAmount || 0,
+        status: order.deliveryStatus || 'pending',
+        paymentType: order.paymentType || 'cod',
+        scannerImage: order.scannerImage,
+        createdAt: order.createdAt,
+      }));
+
+      setOrders(ordersList);
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+      setOrders([]);
+    }
+  };
+
+  const login = async (email: string, password: string, role: 'student' | 'admin' = 'student'): Promise<User> => {
+    try {
+      console.log('Attempting login:', { email, role, apiBase: API_BASE });
+      
+      const loginUrl = `${API_BASE}/api/auth/login`;
+      console.log('POST request to:', loginUrl);
+      
+      const response = await axios.post(loginUrl, {
+        email,
+        password,
+      });
+
+      console.log('Full login response:', response.data);
+
+      let token: string = '';
+      let userData: any = null;
+      
+      if (response.data.token && response.data.user) {
+        token = response.data.token;
+        userData = response.data.user;
+      } else if (response.data.accessToken && response.data.user) {
+        token = response.data.accessToken;
+        userData = response.data.user;
+      } else if (response.data.data) {
+        token = response.data.data.token || response.data.data.accessToken;
+        userData = response.data.data.user || response.data.data;
+      } else if (response.data.id) {
+        userData = response.data;
+        token = response.data.token || response.data.accessToken || `temp-${Date.now()}`;
+      }
+
+      if (!userData) {
+        throw new Error('No user data received from server');
+      }
+
+      const normalizedUser: User = {
+        id: userData._id || userData.id || '',
+        name: userData.name || userData.username || '',
+        email: userData.email || '',
+        phone: userData.phone || '',
+        department: userData.department || '',
+        class: userData.class || userData.year || '',
+        role: userData.role || (userData.isAdmin ? 'admin' : 'student'),
+      };
+
+      if (role === 'student' && normalizedUser.role !== 'student') {
+        throw new Error('This account is not a student account. Please use Admin Login.');
+      }
+      
+      if (role === 'admin' && normalizedUser.role !== 'admin') {
+        throw new Error('This account is not an admin account. Please use Student Login.');
+      }
+
       localStorage.setItem('token', token);
-      const userData = { ...user, role: user.isAdmin ? 'admin' : 'student' };
-      setUser(userData);
-      return userData;
-    } catch (error: any) {
-      console.error('Login error:', error.response ? error.response.data : error.message);
-      return null;
+      if (normalizedUser.role === 'admin') {
+        localStorage.setItem('adminToken', token);
+      }
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      localStorage.setItem('festEatsUser', JSON.stringify(normalizedUser));
+      
+      setUser(normalizedUser);
+      return normalizedUser;
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ERR_NETWORK') {
+          throw new Error(
+            '🔴 Cannot connect to server.\n\n' +
+            'Possible causes:\n' +
+            '• Backend is not running or sleeping (Render free tier)\n' +
+            '• CORS is not configured on backend\n' +
+            '• Network/Internet connection issue\n\n' +
+            'Please wait 30-60 seconds for Render to wake up the backend.'
+          );
+        }
+        
+        if (error.response?.status === 0) {
+          throw new Error('Network error. Please check if backend is accessible.');
+        }
+        
+        const message = error.response?.data?.message || 
+                       error.response?.data?.error ||
+                       'Login failed. Please check your credentials.';
+        throw new Error(message);
+      }
+      
+      if (error instanceof Error) {
+        throw error;
+      }
+      
+      throw new Error('Network error. Please check your connection.');
     }
   };
 
   const register = async (userData: Omit<User, 'id' | 'role'>): Promise<boolean> => {
     try {
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-       console.log('Register request:', userData);
-      const response = await axios.post(`${baseURL}/api/auth/register`, userData);
-       console.log('Register response:', response);
+      const response = await axios.post(`${API_BASE}/api/auth/register`, {
+        ...userData,
+        role: 'student'
+      });
+      
       const { token, user } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('festEatsUser', JSON.stringify(user));
       setUser({ ...user, role: 'student' });
+      
       return true;
-    } catch (error: any) {
-      console.error('Registration error:', error.response ? error.response.data : error.message);
+    } catch (error) {
+      console.error('Registration error:', error);
       return false;
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setCart([]);
+  const updateProfile = async (data: Partial<User>): Promise<void> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !user) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await axios.put(`${API_BASE}/api/auth/profile`, data, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const updatedUser = { ...user, ...response.data.user };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      localStorage.setItem('festEatsUser', JSON.stringify(updatedUser));
+    } catch (error) {
+      console.error('Update profile error:', error);
+      throw error;
+    }
   };
 
-  const addToCart = async (item: MenuItem) => {
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('festEatsUser');
+    setUser(null);
+    setCart([]);
+    setOrders([]);
+  };
+
+  const addToCart = async (item: MenuItem): Promise<void> => {
     if (!user) {
-      console.error('User not logged in');
-      return;
+      throw new Error('User not logged in');
     }
+    
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        console.error('No authentication token found');
-        return;
+        throw new Error('No authentication token found');
       }
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.post(`${baseURL}/api/cart/add`, { foodId: item.id }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setCart(response.data.items.map((cartItem: CartItemBackend) => ({
-        ...cartItem.foodId,
-        id: cartItem.foodId._id,
-        imageUrl: cartItem.foodId.image,
-        quantity: cartItem.quantity
-      })));
+      
+      await axios.post(`${API_BASE}/api/cart/add`, 
+        { foodId: item.id }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      await fetchCart();
     } catch (error) {
       console.error('Failed to add to cart:', error);
       throw error;
     }
   };
 
-  const removeFromCart = async (itemId: string) => {
+  const removeFromCart = async (itemId: string): Promise<void> => {
     if (!user) return;
+    
     try {
       const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.post(`${baseURL}/api/cart/remove`, { foodId: itemId }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setCart(response.data.items.map((cartItem: CartItemBackend) => ({
-        ...cartItem.foodId,
-        id: cartItem.foodId._id,
-        imageUrl: cartItem.foodId.image,
-        quantity: cartItem.quantity
-      })));
+      await axios.post(`${API_BASE}/api/cart/remove`, 
+        { foodId: itemId }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      await fetchCart();
     } catch (error) {
       console.error('Failed to remove from cart:', error);
       throw error;
     }
   };
 
-  const updateCartItemQuantity = async (itemId: string, quantity: number) => {
+  const updateCartItemQuantity = async (itemId: string, quantity: number): Promise<void> => {
     if (!user) return;
+    
     if (quantity <= 0) {
       await removeFromCart(itemId);
-    } else {
-      try {
-        const token = localStorage.getItem('token');
-        const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const response = await axios.post(`${baseURL}/api/cart/update`, { foodId: itemId, quantity }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setCart(response.data.items.map((cartItem: CartItemBackend) => ({
-          ...cartItem.foodId,
-          id: cartItem.foodId._id,
-          imageUrl: cartItem.foodId.image,
-          quantity: cartItem.quantity
-        })));
-      } catch (error) {
-        console.error('Failed to update cart quantity:', error);
-        throw error;
-      }
+      return;
     }
-  };
-
-  const clearCart = async () => {
-    if (!user) return;
+    
     try {
       const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      await axios.delete(`${baseURL}/api/cart/clear`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setCart([]);
+      await axios.post(`${API_BASE}/api/cart/update`, 
+        { foodId: itemId, quantity }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      await fetchCart();
     } catch (error) {
-      console.error('Failed to clear cart');
+      console.error('Failed to update cart quantity:', error);
+      throw error;
     }
   };
 
-  const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
+  const clearCart = async (): Promise<void> => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE}/api/cart/clear`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setCart([]);
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+    }
+  };
+
+  const addMenuItem = async (item: Omit<MenuItem, 'id'>): Promise<MenuItem> => {
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
       if (!token) {
-        throw new Error('Authentication required. Please login as admin.');
+        throw new Error('Authentication required');
       }
 
       const payload = {
@@ -361,93 +480,70 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         available: Boolean(item.available),
       };
 
-      console.log('Adding menu item:', payload);
-      
       const response = await axios.post(`${API_BASE}/api/food/add`, payload, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      
-      console.log('Add menu response:', response.data);
-      
-      // Handle different response structures
-      const foodData = response.data.food || response.data.data || response.data;
+
+      const foodData = response.data.food || response.data;
       const newItem: MenuItem = {
         id: foodData._id || foodData.id,
         name: foodData.name,
         price: Number(foodData.price),
-        imageUrl: foodData.image || foodData.imageUrl || item.imageUrl,
+        imageUrl: foodData.image || item.imageUrl,
         category: foodData.category,
-        available: foodData.available ?? foodData.isAvailable ?? true,
+        available: foodData.available ?? true,
       };
-      
-      console.log('New item created:', newItem);
-      setMenuItems((prev) => [...prev, newItem]);
+
+      setMenuItems(prev => [...prev, newItem]);
       return newItem;
     } catch (error) {
       console.error('Failed to add menu item:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('Backend error details:', {
-          status: error.response?.status,
-          data: error.response?.data,
-        });
-        
-        if (error.response?.status === 401) {
-          throw new Error('Not authorized. Please login as admin again.');
-        }
-        
-        if (error.response?.status === 404) {
-          throw new Error('API endpoint not found. Please contact support.');
-        }
-        
-        const errorMessage = error.response?.data?.message || 
-                           error.response?.data?.error ||
-                           'Failed to add menu item';
-        throw new Error(errorMessage);
-      }
       throw error;
     }
   };
 
-  const updateMenuItem = async (id: string, item: Partial<MenuItem>) => {
+  const updateMenuItem = async (id: string, item: Partial<MenuItem>): Promise<void> => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
       const updateData: any = { ...item };
       if (item.imageUrl) {
         updateData.image = item.imageUrl;
         delete updateData.imageUrl;
       }
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.put(`${baseURL}/api/food/${id}`, updateData, {
+
+      const response = await axios.put(`${API_BASE}/api/food/${id}`, updateData, {
         headers: { Authorization: `Bearer ${token}` }
       });
+
       const updatedItem = {
-        ...response.data.food,
         id: response.data.food._id,
+        name: response.data.food.name,
+        price: response.data.food.price,
         imageUrl: response.data.food.image,
+        category: response.data.food.category,
         available: response.data.food.available
       };
-      setMenuItems((prev) =>
-        prev.map((i) => (i.id === id ? updatedItem : i))
-      );
+
+      setMenuItems(prev => prev.map(i => i.id === id ? updatedItem : i));
     } catch (error) {
-      console.error('Failed to update menu item');
+      console.error('Failed to update menu item:', error);
       throw error;
     }
   };
 
-  const deleteMenuItem = async (id: string) => {
+  const deleteMenuItem = async (id: string): Promise<void> => {
     try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      await axios.delete(`${baseURL}/api/food/${id}`, {
+      const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+      await axios.delete(`${API_BASE}/api/food/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setMenuItems((prev) => prev.filter((i) => i.id !== id));
+
+      setMenuItems(prev => prev.filter(i => i.id !== id));
     } catch (error) {
-      console.error('Failed to delete menu item');
+      console.error('Failed to delete menu item:', error);
       throw error;
     }
   };
@@ -458,226 +554,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.post(`${baseURL}/api/orders`, { paymentType, address }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setCart([]);
+      const response = await axios.post(`${API_BASE}/api/orders`, 
+        { paymentType, address }, 
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      // Refresh orders immediately after placing order to update admin panel
-      if (user.role === 'admin') {
-        await refreshOrders();
-      }
+      await clearCart();
+      await fetchOrders();
 
-      return response.data.orderId;
+      return response.data.orderId || response.data._id;
     } catch (error) {
+      console.error('Failed to place order:', error);
       throw new Error('Failed to place order');
     }
   };
 
-  const updateOrderStatus = async (orderId: string, status: Order['status']) => {
+  const updateOrderStatus = async (orderId: string, status: Order['status']): Promise<void> => {
     try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.put(`${baseURL}/api/orders/${orderId}/status`, { deliveryStatus: status }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      // Update the specific order in the state
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status } : o))
+      const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+      await axios.put(`${API_BASE}/api/orders/${orderId}/status`, 
+        { deliveryStatus: status }, 
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      return response.data;
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
     } catch (error) {
       console.error('Failed to update order status:', error);
       throw error;
     }
   };
 
-  const uploadScannerImage = async (orderId: string, file: File) => {
-    try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const formData = new FormData();
-      formData.append('scannerImage', file);
-
-      const response = await axios.post(`${baseURL}/api/orders/${orderId}/scanner`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      // Update the specific order in the state
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, scannerImage: response.data.order.scannerImage } : o))
-      );
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to upload scanner image:', error);
-      throw error;
-    }
+  const refreshOrders = async (): Promise<void> => {
+    await fetchOrders();
   };
 
-  const getActiveScanner = async () => {
-    try {
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.get(`${baseURL}/api/scanner/active`);
-      setActiveScanner({
-        ...response.data,
-        id: response.data._id
-      });
-    } catch (error) {
-      console.error('Failed to get active scanner:', error);
-      setActiveScanner(null);
-    }
-  };
-
-  const uploadScanner = async (file: File, description?: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const formData = new FormData();
-      formData.append('scannerImage', file);
-      if (description) {
-        formData.append('description', description);
-      }
-
-      const response = await axios.post(`${baseURL}/api/scanner/upload`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      // Refresh active scanner
-      await getActiveScanner();
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to upload scanner:', error);
-      throw error;
-    }
-  };
-
-  const getAllScanners = async (): Promise<Scanner[]> => {
-    try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.get(`${baseURL}/api/scanner`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      return response.data.map((scanner: any) => ({
-        ...scanner,
-        id: scanner._id
-      }));
-    } catch (error) {
-      console.error('Failed to get scanners:', error);
-      throw error;
-    }
-  };
-
-  const updateScannerStatus = async (id: string, isActive: boolean) => {
-    try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.put(`${baseURL}/api/scanner/${id}/status`, { isActive }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      // Refresh active scanner
-      await getActiveScanner();
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to update scanner status:', error);
-      throw error;
-    }
-  };
-
-  const deleteScanner = async (id: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.delete(`${baseURL}/api/scanner/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      // Refresh active scanner
-      await getActiveScanner();
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to delete scanner:', error);
-      throw error;
-    }
-  };
-
-  const refreshOrders = async () => {
-    if (!user) return;
-    try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const endpoint = user.role === 'admin' ? `${baseURL}/api/orders` : `${baseURL}/api/orders/my`;
-      const response = await axios.get(endpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setOrders(response.data.map((order: any) => ({
-        ...order,
-        id: order._id,
-        studentId: order.userId?._id || order.userId,
-        studentName: order.studentName || order.userId?.name || 'Unknown',
-        department: order.department,
-        class: order.class,
-        phone: order.studentPhone || order.userId?.phone || '',
-        email: order.studentEmail || order.userId?.email || '',
-        address: order.address || '',
-        items: order.items.map((item: any) => ({
-          ...item.foodId,
-          id: item.foodId._id,
-          imageUrl: item.foodId.image,
-          quantity: item.quantity
-        })),
-        total: order.totalAmount,
-        status: order.deliveryStatus,
-        scannerImage: order.scannerImage
-      })));
-    } catch (error) {
-      console.error('Failed to refresh orders:', error);
-    }
+  const value: AppContextType = {
+    user,
+    login,
+    register,
+    updateProfile,
+    logout,
+    cart,
+    addToCart,
+    removeFromCart,
+    updateCartItemQuantity,
+    clearCart,
+    menuItems,
+    addMenuItem,
+    updateMenuItem,
+    deleteMenuItem,
+    orders,
+    placeOrder,
+    updateOrderStatus,
+    refreshOrders,
   };
 
   return (
-    <AppContext.Provider
-      value={{
-        user,
-        login,
-        register,
-        logout,
-        cart,
-        addToCart,
-        removeFromCart,
-        updateCartItemQuantity,
-        clearCart,
-        menuItems,
-        addMenuItem,
-        updateMenuItem,
-        deleteMenuItem,
-        orders,
-        placeOrder,
-        updateOrderStatus,
-        uploadScannerImage,
-        refreshOrders,
-        activeScanner,
-        getActiveScanner,
-        uploadScanner,
-        getAllScanners,
-        updateScannerStatus,
-        deleteScanner,
-      }}
-    >
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );
@@ -685,8 +618,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export function useApp() {
   const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within AppProvider');
+  if (context === undefined) {
+    throw new Error('useApp must be used within an AppProvider');
   }
   return context;
 }

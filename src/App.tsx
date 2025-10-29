@@ -3,15 +3,16 @@ import { AppProvider } from './context/AppContext';
 import { Toaster } from './components/ui/sonner';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
+import { Cart } from './pages/Cart';
 
 // Pages
 import { LandingPage } from './pages/LandingPage';
 import { StudentRegister } from './pages/StudentRegister';
 import { StudentLogin } from './pages/StudentLogin';
 import { MenuPage } from './pages/MenuPage';
-import { CartCheckout } from './pages/CartCheckout';
 import { OrderStatus } from './pages/OrderStatus';
 import { MyOrders } from './pages/MyOrders';
+import { Profile } from './pages/Profile';
 
 import { AdminLogin } from './pages/AdminLogin';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -22,7 +23,7 @@ export default function App() {
   return (
     <AppProvider>
       <Router>
-        <div className="min-h-screen flex flex-col">
+        <div className="flex flex-col min-h-screen">
           <Navbar />
           <main className="flex-1">
             <Routes>
@@ -33,9 +34,10 @@ export default function App() {
               {/* Student Routes */}
               <Route path="/student/register" element={<StudentRegister />} />
               <Route path="/student/login" element={<StudentLogin />} />
-              <Route path="/cart" element={<CartCheckout />} />
+              <Route path="/cart" element={<Cart />} />
               <Route path="/order-status/:orderId" element={<OrderStatus />} />
               <Route path="/orders" element={<MyOrders />} />
+              <Route path="/profile" element={<Profile />} />
 
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />

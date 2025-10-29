@@ -13,28 +13,42 @@ import { toast } from 'sonner';
 
 export function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, orders, uploadScanner, activeScanner } = useApp();
+  const { user, orders, refreshOrders } = useApp();
   const [scannerFile, setScannerFile] = useState<File | null>(null);
   const [scannerDescription, setScannerDescription] = useState('');
   const [uploadingScanner, setUploadingScanner] = useState(false);
+  const [activeScanner, setActiveScanner] = useState<{ image: string; description?: string } | null>(null);
+
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       navigate('/admin/login');
+      return;
     }
-  }, [user, navigate]);
+
+    // Fetch initial data for admin
+    const fetchAdminData = async () => {
+      try {
+        await refreshOrders();
+        
+        // Fetch active scanner
+        const response = await fetch(`${API_BASE}/api/scanner/active`);
+        if (response.ok) {
+          const data = await response.json();
+          setActiveScanner(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin data:', error);
+      }
+    };
+
+    fetchAdminData();
+  }, [user, navigate, refreshOrders, API_BASE]);
 
   if (!user || user.role !== 'admin') {
     return null;
   }
-
-  const totalOrders = orders.length;
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const onlineOrders = orders.filter((o) => o.paymentType === 'online').length;
-  const codOrders = orders.filter((o) => o.paymentType === 'cod').length;
-  const pendingOrders = orders.filter((o) => o.status === 'pending').length;
-  const preparingOrders = orders.filter((o) => o.status === 'preparing').length;
-  const deliveredOrders = orders.filter((o) => o.status === 'delivered').length;
 
   const handleUploadScanner = async () => {
     if (!scannerFile) {
@@ -44,16 +58,46 @@ export function AdminDashboard() {
 
     setUploadingScanner(true);
     try {
-      await uploadScanner(scannerFile, scannerDescription);
+      const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+      const formData = new FormData();
+      formData.append('scannerImage', scannerFile);
+      if (scannerDescription) {
+        formData.append('description', scannerDescription);
+      }
+
+      const response = await fetch(`${API_BASE}/api/scanner`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setActiveScanner(data);
       toast.success('Scanner image uploaded successfully!');
       setScannerFile(null);
       setScannerDescription('');
     } catch (error) {
+      console.error('Scanner upload error:', error);
       toast.error('Failed to upload scanner image');
     } finally {
       setUploadingScanner(false);
     }
   };
+
+  // Calculate stats with safety checks
+  const totalOrders = orders?.length || 0;
+  const totalRevenue = orders?.reduce((sum: number, order) => sum + (order?.total || 0), 0) || 0;
+  const onlineOrders = orders?.filter((o) => o?.paymentType === 'online').length || 0;
+  const codOrders = orders?.filter((o) => o?.paymentType === 'cod').length || 0;
+  const pendingOrders = orders?.filter((o) => o?.status === 'pending').length || 0;
+  const preparingOrders = orders?.filter((o) => o?.status === 'preparing').length || 0;
+  const deliveredOrders = orders?.filter((o) => o?.status === 'delivered').length || 0;
 
   const stats = [
     {
@@ -179,7 +223,7 @@ export function AdminDashboard() {
                   )}
 
                   <Dialog>
-                    <DialogTrigger asChild>
+                    <DialogTrigger>
                       <Button className="w-full">
                         <Upload className="w-4 h-4 mr-2" />
                         {activeScanner ? 'Update Scanner Image' : 'Upload Scanner Image'}

@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 export function AdminOrders() {
   const navigate = useNavigate();
-  const { user, orders, updateOrderStatus, uploadScannerImage, refreshOrders } = useApp();
+  const { user, orders, updateOrderStatus, refreshOrders } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('All');
   const [filterPayment, setFilterPayment] = useState('All');
@@ -22,11 +22,17 @@ export function AdminOrders() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [uploadingOrderId, setUploadingOrderId] = useState<string | null>(null);
 
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   useEffect(() => {
     if (!user || user.role !== 'admin') {
       navigate('/admin/login');
+      return;
     }
-  }, [user, navigate]);
+
+    // Initial data fetch
+    refreshOrders();
+  }, [user, navigate, refreshOrders]);
 
   // Auto-refresh orders every 10 seconds for real-time updates
   useEffect(() => {
@@ -55,6 +61,52 @@ export function AdminOrders() {
     return matchesSearch && matchesDepartment && matchesPayment;
   });
 
+  const handleScannerUpload = async (orderId: string, file: File) => {
+    setUploadingOrderId(orderId);
+    try {
+      // Validate file
+      if (!file.type.startsWith('image/jpeg')) {
+        toast.error('Only JPG images are allowed');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+
+      const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+      const formData = new FormData();
+      formData.append('scannerImage', file);
+
+      const response = await fetch(`${API_BASE}/api/orders/${orderId}/scanner`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      toast.success('Scanner image uploaded successfully!');
+      await refreshOrders();
+    } catch (error: any) {
+      console.error('Scanner upload error:', error);
+      toast.error(error?.message || 'Failed to upload scanner image');
+    } finally {
+      setUploadingOrderId(null);
+    }
+  };
+
+  const handleFileSelect = (orderId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleScannerUpload(orderId, file);
+    }
+  };
+
   const handleStatusChange = async (orderId: string, status: 'pending' | 'preparing' | 'delivered') => {
     setIsUpdating(orderId);
     try {
@@ -62,32 +114,18 @@ export function AdminOrders() {
       toast.success('Order status updated successfully!');
       await refreshOrders();
     } catch (error) {
+      console.error('Status update error:', error);
       toast.error('Failed to update order status. Please try again.');
     } finally {
       setIsUpdating(null);
     }
   };
 
-  // Listen for new orders (polling approach)
-  useEffect(() => {
-    if (!user || user.role !== 'admin') return;
-
-    const checkForNewOrders = async () => {
-      try {
-        await refreshOrders();
-      } catch (error) {
-        // Silent fail - will retry on next interval
-      }
-    };
-
-    // Check immediately when component mounts
-    checkForNewOrders();
-
-    // Set up polling every 5 seconds
-    const interval = setInterval(checkForNewOrders, 5000);
-
-    return () => clearInterval(interval);
-  }, [user, refreshOrders]);
+  const resolveImageUrl = (imagePath: string) => {
+    if (!imagePath) return '';
+    if (imagePath.startsWith('http')) return imagePath;
+    return `${API_BASE}${imagePath.startsWith('/') ? imagePath : `/${imagePath}`}`;
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -98,36 +136,6 @@ export function AdminOrders() {
       toast.error('Failed to refresh orders. Please try again.');
     } finally {
       setIsRefreshing(false);
-    }
-  };
-
-  const handleScannerUpload = async (orderId: string, file: File) => {
-    setUploadingOrderId(orderId);
-    try {
-      await uploadScannerImage(orderId, file);
-      toast.success('Scanner image uploaded successfully!');
-      await refreshOrders();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to upload scanner image. Please try again.');
-    } finally {
-      setUploadingOrderId(null);
-    }
-  };
-
-  const handleFileSelect = (orderId: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/jpeg')) {
-        toast.error('Only JPG images are allowed');
-        return;
-      }
-      // Validate file size (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
-        return;
-      }
-      handleScannerUpload(orderId, file);
     }
   };
 
@@ -179,7 +187,7 @@ export function AdminOrders() {
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map((dept) => (
+                      {departments.map((dept: string) => (
                         <SelectItem key={dept} value={dept}>
                           {dept === 'All' ? 'All Departments' : dept}
                         </SelectItem>
@@ -297,7 +305,7 @@ export function AdminOrders() {
                                             </DialogHeader>
                                             <div className="flex justify-center">
                                               <img
-                                                src={`http://localhost:5000${order.scannerImage}`}
+                                                src={resolveImageUrl(order.scannerImage)}
                                                 alt="Payment proof"
                                                 className="max-w-full max-h-96 object-contain"
                                               />
@@ -390,7 +398,7 @@ export function AdminOrders() {
                                 <p className="font-semibold text-gray-800">{order.studentName}</p>
                                 <p className="text-xs text-gray-500">#{order.id.slice(-8)}</p>
                               </div>
-                              <Badge className={`${statusColors[order.status]} text-white text-xs px-2 py-1`}>
+                              <Badge className={`${statusColors[order.status as keyof typeof statusColors]} text-white text-xs px-2 py-1`}>
                                 {order.status}
                               </Badge>
                             </div>
@@ -461,7 +469,7 @@ export function AdminOrders() {
                                     </DialogHeader>
                                     <div className="flex justify-center">
                                       <img
-                                        src={`http://localhost:5000${order.scannerImage}`}
+                                        src={resolveImageUrl(order.scannerImage)}
                                         alt="Payment proof"
                                         className="max-w-full max-h-96 object-contain"
                                       />
