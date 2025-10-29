@@ -46,6 +46,7 @@ interface BackendMenuItem {
   name: string;
   price: number;
   image: string;
+  imageUrl?: string; // Add optional imageUrl property
   available: boolean;
   createdAt: string;
   updatedAt: string;
@@ -99,6 +100,8 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const mockMenuItems: MenuItem[] = [
   { id: '1', name: 'Burger Deluxe', price: 120, imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400', category: 'Meals', available: true },
   { id: '2', name: 'Pizza Margherita', price: 200, imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400', category: 'Meals', available: true },
@@ -137,11 +140,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         const response = await axios.get(`${baseURL}/api/food`);
+        console.log('Raw menu items from backend:', response.data);
+        
         setMenuItems(response.data.map((item: BackendMenuItem) => ({
           ...item,
           id: item._id,
-          imageUrl: item.image,
+          imageUrl: item.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
           available: item.available
+        })));
+        
+        console.log('Mapped menu items:', response.data.map((item: BackendMenuItem) => ({
+          id: item._id,
+          name: item.name,
+          imageUrl: item.image,
         })));
       } catch (error) {
         console.error('Failed to fetch menu items');
@@ -337,20 +348,65 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addMenuItem = async (item: Omit<MenuItem, 'id'>) => {
     try {
-      const token = localStorage.getItem('token');
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const response = await axios.post(`${baseURL}/api/food/add`, item, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const newItem = {
-        ...response.data.food,
-        id: response.data.food._id,
-        imageUrl: response.data.food.image,
-        available: response.data.food.available
+      const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+      if (!token) {
+        throw new Error('Authentication required. Please login as admin.');
+      }
+
+      const payload = {
+        name: item.name,
+        price: Number(item.price),
+        image: item.imageUrl,
+        category: item.category,
+        available: Boolean(item.available),
       };
+
+      console.log('Adding menu item:', payload);
+      
+      const response = await axios.post(`${API_BASE}/api/food/add`, payload, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Add menu response:', response.data);
+      
+      // Handle different response structures
+      const foodData = response.data.food || response.data.data || response.data;
+      const newItem: MenuItem = {
+        id: foodData._id || foodData.id,
+        name: foodData.name,
+        price: Number(foodData.price),
+        imageUrl: foodData.image || foodData.imageUrl || item.imageUrl,
+        category: foodData.category,
+        available: foodData.available ?? foodData.isAvailable ?? true,
+      };
+      
+      console.log('New item created:', newItem);
       setMenuItems((prev) => [...prev, newItem]);
+      return newItem;
     } catch (error) {
-      console.error('Failed to add menu item');
+      console.error('Failed to add menu item:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Backend error details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+        });
+        
+        if (error.response?.status === 401) {
+          throw new Error('Not authorized. Please login as admin again.');
+        }
+        
+        if (error.response?.status === 404) {
+          throw new Error('API endpoint not found. Please contact support.');
+        }
+        
+        const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.error ||
+                           'Failed to add menu item';
+        throw new Error(errorMessage);
+      }
       throw error;
     }
   };

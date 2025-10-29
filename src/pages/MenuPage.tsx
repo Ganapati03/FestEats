@@ -41,6 +41,16 @@ export function MenuPage() {
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  // Helper to resolve image URLs
+  const resolveImageUrl = (imageUrl: string) => {
+    if (!imageUrl) return 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400';
+    if (imageUrl.startsWith('http')) return imageUrl;
+    if (imageUrl.startsWith('/')) return `${API_BASE}${imageUrl}`;
+    return imageUrl;
+  };
+
   return (
     <div className="min-h-[calc(100vh-64px)] py-8">
       <div className="container mx-auto px-4">
@@ -80,37 +90,40 @@ export function MenuPage() {
 
         {/* Food Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
-          {filteredItems.map((item) => (
-            <Card
-              key={item.id}
-              className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-            >
-              <div className="relative h-48 overflow-hidden">
-                <ImageWithFallback
-                  src={item.imageUrl}
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                />
-                <Badge className="absolute top-2 right-2 bg-white text-gray-800">
-                  {item.category}
-                </Badge>
-              </div>
-              <CardContent className="p-4">
-                <h3 className="mb-2 text-gray-800">{item.name}</h3>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl text-primary">₹{item.price}</span>
-                  <Button
-                    size="sm"
-                    onClick={() => handleAddToCart(item)}
-                    className="rounded-full"
-                  >
-                    <ShoppingCart className="w-4 h-4 mr-1" />
-                    Add
-                  </Button>
+          {filteredItems.map((item) => {
+            console.log('Rendering item:', item.name, 'Image:', item.imageUrl);
+            return (
+              <Card
+                key={item.id}
+                className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="relative h-48 overflow-hidden">
+                  <ImageWithFallback
+                    src={resolveImageUrl(item.imageUrl)}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <Badge className="absolute top-2 right-2 bg-white text-gray-800">
+                    {item.category}
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardContent className="p-4">
+                  <h3 className="mb-2 text-gray-800">{item.name}</h3>
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl text-primary">₹{item.price}</span>
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddToCart(item)}
+                      className="rounded-full"
+                    >
+                      <ShoppingCart className="w-4 h-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {filteredItems.length === 0 && (

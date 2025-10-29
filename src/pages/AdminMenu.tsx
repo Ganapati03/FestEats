@@ -15,11 +15,9 @@ import { toast } from 'sonner';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
 export function AdminMenu() {
   const navigate = useNavigate();
-  const { user, menuItems, deleteMenuItem } = useApp();
+  const { user, menuItems, addMenuItem, updateMenuItem, deleteMenuItem } = useApp();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [imageSearchQuery, setImageSearchQuery] = useState('');
@@ -43,47 +41,65 @@ export function AdminMenu() {
     return null;
   }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setSubmitting(true);
-    try {
-      // Basic validation
-      if (!formData.name.trim()) {
-        toast.error('Item name is required');
-        return;
-      }
-      const priceNum = Number(formData.price);
-      if (Number.isNaN(priceNum) || priceNum <= 0) {
-        toast.error('Enter a valid price greater than 0');
-        return;
-      }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    const priceNum = parseFloat(formData.price);
+    if (!formData.name.trim()) {
+      toast.error('Please enter a menu item name');
+      return;
+    }
+    if (isNaN(priceNum) || priceNum <= 0) {
+      toast.error('Please enter a valid price greater than 0');
+      return;
+    }
+    if (!formData.imageUrl.trim()) {
+      toast.error('Please provide an image URL');
+      return;
+    }
 
-      // Build payload from formData
-      const payload = {
+    try {
+      setSubmitting(true);
+      
+      const menuItemData = {
         name: formData.name.trim(),
         price: priceNum,
-        imageUrl: formData.imageUrl, // backend may map this to 'image'
+        imageUrl: formData.imageUrl.trim(),
         category: formData.category,
         available: formData.available,
       };
-
-      // Auth header if token exists
-      const token = localStorage.getItem('token');
-      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+      
+      console.log('Submitting:', editingItem ? 'UPDATE' : 'ADD', menuItemData);
 
       if (editingItem) {
-        await axios.put(`${API_BASE}/api/admin/menu/${editingItem}`, payload, config);
-        toast.success('Menu item updated successfully');
+        await updateMenuItem(editingItem, menuItemData);
+        toast.success('Menu item updated successfully!');
       } else {
-        await axios.post(`${API_BASE}/api/admin/menu`, payload, config);
-        toast.success('Menu item added successfully');
+        const newItem = await addMenuItem(menuItemData);
+        console.log('New item added:', newItem);
+        toast.success('Menu item added successfully!');
       }
 
-      // Reset and close
       resetForm();
       setDialogOpen(false);
-    } catch (error) {
-      toast.error('Failed to save menu item. Please try again.');
+      
+      // Item is already added to state by addMenuItem
+      // No need to reload - this was causing logout!
+    } catch (error: any) {
+      console.error('Submit error:', error);
+      
+      let errorMessage = 'Failed to save menu item';
+      
+      if (axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || 
+                      error.response?.data?.error ||
+                      error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -380,67 +396,70 @@ export function AdminMenu() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {menuItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
-                  >
-                    <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                      <ImageWithFallback
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
+                {menuItems.map((item) => {
+                  console.log('Admin menu item:', item.name, 'Image:', item.imageUrl);
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
+                    >
+                      <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                        <ImageWithFallback
+                          src={item.imageUrl || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400'}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-gray-800">{item.name}</h3>
+                        <p className="text-sm text-gray-600">{item.category}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl text-primary">₹{item.price}</p>
+                        <p className="text-sm text-gray-600">
+                          {item.available ? (
+                            <span className="text-green-600">Available</span>
+                          ) : (
+                            <span className="text-red-600">Unavailable</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Menu Item?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(item.id)}
+                                className="bg-red-500 hover:bg-red-600"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-gray-800">{item.name}</h3>
-                      <p className="text-sm text-gray-600">{item.category}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl text-primary">₹{item.price}</p>
-                      <p className="text-sm text-gray-600">
-                        {item.available ? (
-                          <span className="text-green-600">Available</span>
-                        ) : (
-                          <span className="text-red-600">Unavailable</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(item)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Menu Item?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{item.name}"? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(item.id)}
-                              className="bg-red-500 hover:bg-red-600"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
