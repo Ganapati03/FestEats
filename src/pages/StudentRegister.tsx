@@ -6,7 +6,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
-import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { VantaBackground } from '../components/VantaBackground';
 import { UserPlus } from 'lucide-react';
 
 export function StudentRegister() {
@@ -46,31 +46,15 @@ export function StudentRegister() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center py-12 px-4 bg-linear-to-br from-orange-50 via-white to-blue-50">
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        {/* Illustration Side */}
-        <div className="hidden lg:block">
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-            <ImageWithFallback
-              src="https://images.unsplash.com/photo-1609153315701-1a12bc6acf63?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHVkZW50JTIwcmVnaXN0cmF0aW9uJTIwaWxsdXN0cmF0aW9ufGVufDF8fHx8MTc2MDA3ODI2NHww&ixlib=rb-4.1.0&q=80&w=1080"
-              alt="Students at fest"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent flex items-end p-8">
-              <div className="text-white">
-                <h2 className="text-3xl font-bold mb-2 text-white">Join FestEats!</h2>
-                <p className="text-lg text-white/90">
-                  Order delicious food and enjoy your college fest to the fullest.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Form Side */}
-        <Card className="shadow-xl">
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center py-12 px-4 relative overflow-hidden">
+      {/* Vanta Animated Background */}
+      <VantaBackground />
+      
+      {/* Content wrapper */}
+      <div className="relative z-10 w-full flex justify-center">
+        <Card className="w-full max-w-2xl shadow-xl">
           <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gradient-golden rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
               <UserPlus className="w-8 h-8 text-white" />
             </div>
             <CardTitle>Create Your Account</CardTitle>

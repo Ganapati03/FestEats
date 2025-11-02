@@ -5,6 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { useApp } from '../context/AppContext';
+import { VantaBackground } from '../components/VantaBackground';
 import { toast } from 'sonner';
 import { Shield } from 'lucide-react';
 
@@ -51,69 +52,75 @@ export function AdminLogin() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center py-12 px-4 bg-linear-to-br from-orange-50 via-white to-blue-50">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-linear-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          <CardTitle>Admin Login</CardTitle>
-          <CardDescription>
-            Access the FestEats admin dashboard
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Admin Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="admin@festeats.com"
-                className="mt-1"
-              />
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center py-12 px-4 relative overflow-hidden">
+      {/* Vanta Animated Background */}
+      <VantaBackground />
+      
+      {/* Content with relative positioning */}
+      <div className="relative z-10 w-full flex justify-center">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-gradient-golden rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Shield className="w-8 h-8 text-white" />
             </div>
+            <CardTitle>Admin Login</CardTitle>
+            <CardDescription>
+              Access the FestEats admin dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="email">Admin Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="admin@festeats.com"
+                  className="mt-1"
+                />
+              </div>
 
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className="mt-1"
-              />
-            </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className="mt-1"
+                />
+              </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login as Admin'}
-            </Button>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Logging in...' : 'Login as Admin'}
+              </Button>
 
-            <p className="text-center text-sm text-gray-600">
-              Not an admin?{' '}
-              <Link to="/student/login" className="text-primary hover:underline">
-                Student Login
-              </Link>
-            </p>
-          </form>
+              <p className="text-center text-sm text-gray-600">
+                Not an admin?{' '}
+                <Link to="/student/login" className="text-primary hover:underline">
+                  Student Login
+                </Link>
+              </p>
+            </form>
 
-          {/* Demo Credentials */}
-          {/* <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-xs text-gray-600 mb-1">
-              <strong>Demo Admin Credentials:</strong>
-            </p>
-            <p className="text-xs text-gray-600">Email: admin@festeats.com</p>
-            <p className="text-xs text-gray-600">Password: admin123</p>
-          </div> */}
-        </CardContent>
-      </Card>
+            {/* Demo Credentials */}
+            {/* <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-xs text-gray-600 mb-1">
+                <strong>Demo Admin Credentials:</strong>
+              </p>
+              <p className="text-xs text-gray-600">Email: admin@festeats.com</p>
+              <p className="text-xs text-gray-600">Password: admin123</p>
+            </div> */}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

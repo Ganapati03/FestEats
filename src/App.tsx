@@ -4,6 +4,7 @@ import { Toaster } from './components/ui/sonner';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { Cart } from './pages/Cart';
+import { VoiceChatbot } from './components/VoiceChatbot';
 
 // Pages
 import { LandingPage } from './pages/LandingPage';
@@ -51,6 +52,7 @@ export default function App() {
           </main>
           <Footer />
           <Toaster position="top-center" richColors />
+          <VoiceChatbot />
         </div>
       </Router>
     </AppProvider>

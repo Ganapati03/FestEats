@@ -10,10 +10,10 @@ export function Footer() {
           {/* Brand Section */}
           <div className="text-center sm:text-left">
             <div className="flex items-center justify-center sm:justify-start gap-3 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-400 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+              <div className="w-12 h-12 bg-gradient-golden rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
                 <span className="text-white text-2xl" role="img" aria-label="burger">🍔</span>
               </div>
-              <h2 className="text-2xl font-bold text-orange-500">
+              <h2 className="text-2xl font-bold text-golden">
                 FestEats
               </h2>
             </div>
@@ -58,7 +58,7 @@ export function Footer() {
               <a
                 href="#"
                 aria-label="Follow us on Facebook"
-                className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white hover:scale-110 active:scale-95 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-orange-500"
+                className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center hover:bg-golden hover:text-white hover:scale-110 active:scale-95 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-golden"
               >
                 <Facebook className="w-5 h-5" />
               </a>
@@ -83,7 +83,7 @@ export function Footer() {
         {/* Copyright - responsive text size */}
         <div className="border-t mt-8 pt-6 text-center">
           <p className="text-xs sm:text-sm text-gray-500">
-            &copy; 2025 <span className="font-semibold text-orange-500">FestEats</span>. All rights reserved. Made with{' '}
+            &copy; 2025 <span className="font-semibold text-golden">FestEats</span>. All rights reserved. Made with{' '}
             <span className="text-red-500" role="img" aria-label="love">❤️</span>{' '}
             for college students.
           </p>

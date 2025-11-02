@@ -227,243 +227,245 @@ export function AdminMenu() {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)]">
-      <AdminSidebar />
-      <div className="flex-1 p-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-gray-800">Menu Management</h1>
-            <Dialog open={dialogOpen} onOpenChange={(open: boolean) => {
-              setDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Menu Item
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <Label htmlFor="name">Item Name</Label>
-                    <Input
-                      id="name"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Burger Deluxe"
-                      className="mt-1"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="price">Price (₹)</Label>
-                      <Input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        required
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        placeholder="120"
-                        className="mt-1"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="category">Category</Label>
-                      <Select
-                        value={formData.category}
-                        onValueChange={(value: string) => setFormData({ ...formData, category: value })}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Meals">Meals</SelectItem>
-                          <SelectItem value="Snacks">Snacks</SelectItem>
-                          <SelectItem value="Drinks">Drinks</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Image Section */}
-                  <div className="space-y-4 border-t pt-4">
-                    <Label>Item Image</Label>
-
-                    {/* Image Preview */}
-                    {formData.imageUrl && (
-                      <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gray-100">
-                        <ImageWithFallback
-                          src={formData.imageUrl}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-
-                    {/* Search for Image */}
-                    <div className="space-y-2">
-                      <Label className="text-sm text-gray-600">Option 1: Search Stock Image</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="text"
-                          value={imageSearchQuery}
-                          onChange={(e) => setImageSearchQuery(e.target.value)}
-                          placeholder="e.g., burger, pizza, coffee..."
-                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchImage())}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleSearchImage}
-                          disabled={isSearchingImage}
-                        >
-                          <Search className="w-4 h-4 mr-2" />
-                          {isSearchingImage ? 'Searching...' : 'Search'}
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Upload Image */}
-                    <div className="space-y-2">
-                      <Label className="text-sm text-gray-600">Option 2: Upload Image</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          id="imageUpload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                        <Label
-                          htmlFor="imageUpload"
-                          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                        >
-                          <ImageIcon className="w-4 h-4" />
-                          Choose File
-                        </Label>
-                        <span className="text-xs text-gray-500">Max 2MB</span>
-                      </div>
-                    </div>
-
-                    {/* Manual URL */}
-                    <div className="space-y-2">
-                      <Label htmlFor="imageUrl" className="text-sm text-gray-600">
-                        Option 3: Enter Image URL
-                      </Label>
-                      <Input
-                        id="imageUrl"
-                        type="text"
-                        value={formData.imageUrl}
-                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                        placeholder="https://example.com/image.jpg or paste from clipboard"
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between border-t pt-4">
-                    <Label htmlFor="available">Available for Order</Label>
-                    <Switch
-                      id="available"
-                      checked={formData.available}
-                      onCheckedChange={(checked: boolean) =>
-                        setFormData({ ...formData, available: checked })
-                      }
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={submitting}>
-                    {editingItem ? 'Update Item' : 'Add Item'}
+    <div className="min-h-screen bg-gray-50/50">
+      <div className="flex">
+        <AdminSidebar />
+        <main className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-gray-800">Menu Management</h1>
+              <Dialog open={dialogOpen} onOpenChange={(open: boolean) => {
+                setDialogOpen(open);
+                if (!open) resetForm();
+              }}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Menu Item
                   </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <Label htmlFor="name">Item Name</Label>
+                      <Input
+                        id="name"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Burger Deluxe"
+                        className="mt-1"
+                      />
+                    </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>All Menu Items ({menuItems.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {menuItems.map((item) => {
-                  console.log('Admin menu item:', item.name, 'Image:', item.imageUrl);
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
-                    >
-                      <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                        <ImageWithFallback
-                          src={item.imageUrl || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400'}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="price">Price (₹)</Label>
+                        <Input
+                          id="price"
+                          type="number"
+                          step="0.01"
+                          required
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          placeholder="120"
+                          className="mt-1"
                         />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-gray-800">{item.name}</h3>
-                        <p className="text-sm text-gray-600">{item.category}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl text-primary">₹{item.price}</p>
-                        <p className="text-sm text-gray-600">
-                          {item.available ? (
-                            <span className="text-green-600">Available</span>
-                          ) : (
-                            <span className="text-red-600">Unavailable</span>
-                          )}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(item)}
+
+                      <div>
+                        <Label htmlFor="category">Category</Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(value: string) => setFormData({ ...formData, category: value })}
                         >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Menu Item?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{item.name}"? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDelete(item.id)}
-                                className="bg-red-500 hover:bg-red-600"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Meals">Meals</SelectItem>
+                            <SelectItem value="Snacks">Snacks</SelectItem>
+                            <SelectItem value="Drinks">Drinks</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+
+                    {/* Image Section */}
+                    <div className="space-y-4 border-t pt-4">
+                      <Label>Item Image</Label>
+
+                      {/* Image Preview */}
+                      {formData.imageUrl && (
+                        <div className="relative w-full h-48 rounded-lg overflow-hidden bg-gray-100">
+                          <ImageWithFallback
+                            src={formData.imageUrl}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+
+                      {/* Search for Image */}
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-600">Option 1: Search Stock Image</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="text"
+                            value={imageSearchQuery}
+                            onChange={(e) => setImageSearchQuery(e.target.value)}
+                            placeholder="e.g., burger, pizza, coffee..."
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchImage())}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleSearchImage}
+                            disabled={isSearchingImage}
+                          >
+                            <Search className="w-4 h-4 mr-2" />
+                            {isSearchingImage ? 'Searching...' : 'Search'}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Upload Image */}
+                      <div className="space-y-2">
+                        <Label className="text-sm text-gray-600">Option 2: Upload Image</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="imageUpload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                          />
+                          <Label
+                            htmlFor="imageUpload"
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                            Choose File
+                          </Label>
+                          <span className="text-xs text-gray-500">Max 2MB</span>
+                        </div>
+                      </div>
+
+                      {/* Manual URL */}
+                      <div className="space-y-2">
+                        <Label htmlFor="imageUrl" className="text-sm text-gray-600">
+                          Option 3: Enter Image URL
+                        </Label>
+                        <Input
+                          id="imageUrl"
+                          type="text"
+                          value={formData.imageUrl}
+                          onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                          placeholder="https://example.com/image.jpg or paste from clipboard"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t pt-4">
+                      <Label htmlFor="available">Available for Order</Label>
+                      <Switch
+                        id="available"
+                        checked={formData.available}
+                        onCheckedChange={(checked: boolean) =>
+                          setFormData({ ...formData, available: checked })
+                        }
+                      />
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={submitting}>
+                      {editingItem ? 'Update Item' : 'Add Item'}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>All Menu Items ({menuItems.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {menuItems.map((item) => {
+                    console.log('Admin menu item:', item.name, 'Image:', item.imageUrl);
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-4 p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
+                      >
+                        <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                          <ImageWithFallback
+                            src={item.imageUrl || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400'}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-gray-800">{item.name}</h3>
+                          <p className="text-sm text-gray-600">{item.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl text-primary">₹{item.price}</p>
+                          <p className="text-sm text-gray-600">
+                            {item.available ? (
+                              <span className="text-green-600">Available</span>
+                            ) : (
+                              <span className="text-red-600">Unavailable</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Menu Item?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{item.name}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(item.id)}
+                                  className="bg-red-500 hover:bg-red-600"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
       </div>
     </div>
   );

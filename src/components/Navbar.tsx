@@ -74,10 +74,10 @@ export function Navbar() {
       <div className="mx-auto w-full max-[430px]:w-[100vw] px-0 md:px-4 py-4">
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-golden rounded-full flex items-center justify-center shadow-lg">
               <span className="text-white">🍔</span>
             </div>
-            <span className="text-xl font-semibold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <span className="text-xl font-semibold text-golden">
               FestEats
             </span>
           </Link>

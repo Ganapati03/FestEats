@@ -1,5 +1,4 @@
-
-  <!DOCTYPE html>
+<!DOCTYPE html>
   <html lang="en">
     <head>
       <meta charset="UTF-8" />
@@ -10,6 +9,35 @@
     <body>
       <div id="root"></div>
       <script type="module" src="/src/main.tsx"></script>
+      
+      <!-- Vanta.js Background Scripts -->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.clouds.min.js"></script>
+      
+      <script>
+        // Wait for page load
+        window.addEventListener('load', function() {
+          // Find the target element (adjust selector as needed)
+          const targetElement = document.querySelector('.hero-section') || document.getElementById('root');
+          
+          if (window.VANTA && targetElement) {
+            window.VANTA.CLOUDS({
+              el: targetElement,
+              mouseControls: true,
+              touchControls: true,
+              gyroControls: false,
+              minHeight: 200.00,
+              minWidth: 200.00,
+              skyColor: 0xfff5e6,
+              cloudColor: 0xff8c42,
+              cloudShadowColor: 0xd96c2c,
+              sunColor: 0xffaa33,
+              sunGlareColor: 0xff6b35,
+              speed: 1.2,
+              backgroundAlpha: 0.95
+            });
+          }
+        });
+      </script>
     </body>
   </html>
-  
