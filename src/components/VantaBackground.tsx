@@ -4,6 +4,10 @@ export function VantaBackground() {
   const vantaRef = useRef<HTMLDivElement>(null);
   const vantaEffect = useRef<any>(null);
 
+  // Temporarily disabled Vanta.js background
+  // Uncomment the useEffect below to re-enable
+
+  /*
   useEffect(() => {
     // Load scripts dynamically
     const loadVanta = async () => {
@@ -72,11 +76,12 @@ export function VantaBackground() {
       }
     };
   }, []);
+  */
 
   return (
     <div
       ref={vantaRef}
-      className="absolute inset-0 w-full h-full -z-10"
+      className="absolute inset-0 w-full h-full -z-10 bg-gradient-to-br from-blue-50 to-purple-50"
       style={{
         minHeight: '100vh',
         position: 'absolute',
